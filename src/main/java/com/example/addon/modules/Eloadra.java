@@ -10,19 +10,28 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
 import net.minecraft.util.math.Vec3d;
 
 public class Eloadra extends Module {
-    private final SettingGroup sgHorizontal = this.settings.getDefaultGroup();
-    private final SettingGroup sgUp = this.settings.getDefaultGroup();
-    private final SettingGroup sgAfk = this.settings.getDefaultGroup();
+    private final SettingGroup sgHorizontal = this.settings.createGroup("Horizontal");
+    private final SettingGroup sgUp = this.settings.createGroup("Up");
+    private final SettingGroup sgAfk = this.settings.createGroup("Anti Afk");
+
+    private final Setting<hModes> hMode = sgHorizontal.add(new EnumSetting.Builder<hModes>()
+        .name("Horizontal Mode")
+        .defaultValue(hModes.PACKET)
+        .build()
+    );
 
     private final Setting<Double> controlSpeed = sgHorizontal.add(new DoubleSetting.Builder()
         .name("speed")
         .description("look at name")
-        .defaultValue(50d)
-        .range(0d, 100.0d)
+        .defaultValue(5d)
+        .range(0d, 4d)
+        .sliderRange(0d, 4d)
+        .visible(() -> hMode.get() == hModes.CONTROL)
         .build()
     );
 
@@ -31,6 +40,8 @@ public class Eloadra extends Module {
         .description("look at name")
         .defaultValue(0.36d)
         .range(0d, 3.0d)
+        .sliderRange(0d, 2d)
+        .visible(() -> hMode.get() == hModes.PACKET)
         .build()
     );
 
@@ -38,7 +49,8 @@ public class Eloadra extends Module {
         .name("accelleration")
         .description("look at name")
         .defaultValue(3d)
-        .range(0d, 180d)
+        .range(0d, 10d)
+        .sliderRange(0d, 10d)
         .build()
     );
 
@@ -49,15 +61,39 @@ public class Eloadra extends Module {
         .build()
     );
 
-    private final Setting<hModes> hMode = sgHorizontal.add(new EnumSetting.Builder<hModes>()
-        .name("Horizontal Mode")
-        .defaultValue(hModes.PACKET)
+    private final Setting<uModes> uMode = sgUp.add(new EnumSetting.Builder<uModes>()
+        .name("Up Mode")
+        .description("mode for flying upwards")
+        .defaultValue(uModes.CONTROL)
         .build()
     );
 
-    private final Setting<uModes> uMode = sgUp.add(new EnumSetting.Builder<uModes>()
-        .name("Mode for flying up")
-        .defaultValue(uModes.CONTROL)
+    private final Setting<Double> uControlSpeed = sgUp.add(new DoubleSetting.Builder()
+        .name("speed")
+        .description("look at name")
+        .defaultValue(5d)
+        .range(0d, 4d)
+        .sliderRange(0d, 4d)
+        .build()
+    );
+
+    private final Setting<Double> upFactor = sgUp.add(new DoubleSetting.Builder()
+        .name("speed")
+        .description("look at name")
+        .defaultValue(1.2d)
+        .sliderRange(0d, 4d)
+        .build()
+    );
+
+    private final Setting<Integer> upTimer = sgUp.add(new IntSetting.Builder()
+        .name("Up Timer")
+        .defaultValue(10)
+        .sliderRange(0, 40)
+        .build()
+    );
+
+    private final Setting<Boolean> antiAfk = sgAfk.add(new BoolSetting.Builder()
+        .name("Anti Afk")
         .build()
     );
 
@@ -65,24 +101,32 @@ public class Eloadra extends Module {
         .name("afk timer")
         .description("How long to wait before anti afk kicks in. (ticks)")
         .defaultValue(20)
-        .min(0)
-        .max(200)
+        .range(0,200)
+        .sliderRange(0, 200)
         .build()
     );
 
     private final Setting<Double> afkSpeed = sgAfk.add(new DoubleSetting.Builder()
         .name("afk speed")
         .defaultValue(0.05)
-        .min(0)
-        .max(2)
+        .range(0,2)
+        .sliderRange(0,2)
+        .build()
+    );
+
+    private final Setting<Double> afkMinSpeed = sgAfk.add(new DoubleSetting.Builder()
+        .name("min afk speed threshold")
+        .defaultValue(0.05)
+        .range(0,2)
+        .sliderRange(0,2)
         .build()
     );
 
     private final Setting<Double> afkAngle = sgAfk.add(new DoubleSetting.Builder()
         .name("afk angle")
         .defaultValue(3)
-        .min(0)
-        .max(180)
+        .range(0, 180)
+        .sliderRange(0, 180)
         .build()
     );
 
@@ -99,7 +143,6 @@ public class Eloadra extends Module {
     }
 
     private int afkTick = 0;
-    private int ticks = 0;
     private double currentSpeed = 0;
     private double pitch = 0;
     private double upTick = 0;
@@ -134,17 +177,18 @@ public class Eloadra extends Module {
     }
 
     @EventHandler
-    private void onTick(TickEvent.Post event) {
-        ticks++;
-        if(getInputDirection().length() == 0 && !mc.options.jumpKey.isPressed() && !mc.options.sneakKey.isPressed()) afkTick++;
-        else afkTick = 0;
+    private void onPostTick(TickEvent.Post event) {
+        if (antiAfk.get() && !mc.player.isOnGround()) {
+            if(getInputDirection().length() == 0 && !mc.options.jumpKey.isPressed() && !mc.options.sneakKey.isPressed() && (mc.player.getVelocity().length() <= afkMinSpeed.get() || afkTick > 0)) afkTick++;
+            else afkTick = 0;
 
-        if (afkTick > afkTimer.get()) {
-            mc.player.setVelocity(
-                Math.cos(Math.toRadians((afkTick%360) * afkAngle.get())) * afkSpeed.get(),
-                0,
-                Math.sin(Math.toRadians((afkTick%360) * afkAngle.get())) * afkSpeed.get()
-            );
+            if (afkTick > afkTimer.get()) {
+                mc.player.setVelocity(
+                    Math.cos(Math.toRadians((afkTick%360) * afkAngle.get())) * afkSpeed.get(),
+                    0,
+                    Math.sin(Math.toRadians((afkTick%360) * afkAngle.get())) * afkSpeed.get()
+                );
+            }
         }
 
         if(mc.player.isOnGround() && !onGround.get()) {
@@ -168,7 +212,7 @@ public class Eloadra extends Module {
     }
 
     @EventHandler
-    private void onTick(TickEvent.Pre event) {
+    private void onPreTick(TickEvent.Pre event) {
         if(!mc.options.jumpKey.isPressed()) {
             if(mc.player.isOnGround() && !onGround.get()) return;
             switch (hMode.get()) {
@@ -176,6 +220,9 @@ public class Eloadra extends Module {
                     mc.player.setPose(EntityPose.STANDING);
                 }
             }
+        } else {
+            mc.player.getAbilities().allowFlying = false;
+            mc.player.getAbilities().flying = false;
         }
     }
 
@@ -218,7 +265,7 @@ public class Eloadra extends Module {
 
                     boolean movingUp = false;
 
-                    if (!mc.options.sneakKey.isPressed() && upTick > 5 && velocity > controlSpeed.get() * 0.4) {
+                    if (!mc.options.sneakKey.isPressed() && upTick > upTimer.get() && velocity > uControlSpeed.get() * 0.4) {
                         p = (float) Math.min(p + 0.1 * (1 - p) * (1 - p) * (1 - p), 1f);
 
                         pitch = Math.max(Math.max(p, 0) * -90, -90);
@@ -226,23 +273,26 @@ public class Eloadra extends Module {
                         movingUp = true;
                         moving = false;
                     } else {
-                        velocity = controlSpeed.get();
+                        velocity = uControlSpeed.get();
                         p = -0.2f;
                     }
 
-                    velocity = moving ? controlSpeed.get() : Math.min(velocity + Math.sin(Math.toRadians(pitch)) * 0.08, controlSpeed.get());
+                    velocity = moving ? uControlSpeed.get() : Math.min(velocity + Math.sin(Math.toRadians(pitch)) * 0.08, uControlSpeed.get());
 
                     Vec3d movementDir = getInputDirection();
                     if (getInputDirection().length() == 0) {
                         movementDir = Vec3d.Z.rotateY(-(float) Math.toRadians(mc.player.getYaw()));
                         if(upTick % 2 == 0) movementDir = movementDir.rotateY((float) Math.toRadians(180));
                     }
-                    if (upTick <= 5) movementDir = Vec3d.ZERO;
+                    if (upTick <= upTimer.get()) {
+                        movementDir = Vec3d.ZERO;
+                        mc.player.setVelocity(Vec3d.ZERO);
+                    }
 
 
-                    double x = moving && !movingUp ? movementDir.x * controlSpeed.get() : movingUp ? velocity * Math.cos(Math.toRadians(pitch)) * movementDir.x : 0;
+                    double x = moving && !movingUp ? movementDir.x * uControlSpeed.get() : movingUp ? velocity * Math.cos(Math.toRadians(pitch)) * movementDir.x : 0;
                     double y = pitch < 0 ? velocity * 1.2 * -Math.sin(Math.toRadians(pitch)) * velocity : 0;
-                    double z = moving && !movingUp ? movementDir.z * controlSpeed.get() : movingUp ? velocity * Math.cos(Math.toRadians(pitch)) * movementDir.z : 0;
+                    double z = moving && !movingUp ? movementDir.z * uControlSpeed.get() : movingUp ? velocity * Math.cos(Math.toRadians(pitch)) * movementDir.z : 0;
 
                     y *= Math.abs(Math.sin(Math.toRadians(movingUp ? pitch : mc.player.getPitch())));
 
@@ -257,9 +307,10 @@ public class Eloadra extends Module {
 
     @EventHandler
     public void onPacketReceive(PacketEvent.Receive event) {
+
         switch (hMode.get()) {
             case PACKET -> {
-                if (event.packet instanceof EntityTrackerUpdateS2CPacket && ((EntityTrackerUpdateS2CPacket) event.packet).id() == mc.player.getId()) {
+                if (event.packet instanceof EntityTrackerUpdateS2CPacket && ((EntityTrackerUpdateS2CPacket) event.packet).id() == mc.player.getId() && !mc.options.jumpKey.isPressed()) {
                     event.cancel();
                 }
             }
