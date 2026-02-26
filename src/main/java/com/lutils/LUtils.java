@@ -1,8 +1,8 @@
-package com.example.addon;
+package com.lutils;
 
-import com.example.addon.commands.CommandExample;
-import com.example.addon.hud.HudExample;
-import com.example.addon.modules.Eloadra;
+import com.lutils.commands.CommandExample;
+import com.lutils.hud.HudExample;
+import com.lutils.modules.Eloadra;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -39,11 +39,11 @@ public class LUtils extends MeteorAddon {
 
     @Override
     public String getPackage() {
-        return "com.example.addon";
+        return "com.lutils";
     }
 
     @Override
     public GithubRepo getRepo() {
-        return new GithubRepo("MeteorDevelopment", "meteor-addon-template");
+        return new GithubRepo("Loading...", "LUtils");
     }
 }

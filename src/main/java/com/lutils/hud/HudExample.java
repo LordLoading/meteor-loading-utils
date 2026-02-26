@@ -1,6 +1,6 @@
-package com.example.addon.hud;
+package com.lutils.hud;
 
-import com.example.addon.LUtils;
+import com.lutils.LUtils;
 import meteordevelopment.meteorclient.systems.hud.HudElement;
 import meteordevelopment.meteorclient.systems.hud.HudElementInfo;
 import meteordevelopment.meteorclient.systems.hud.HudRenderer;
