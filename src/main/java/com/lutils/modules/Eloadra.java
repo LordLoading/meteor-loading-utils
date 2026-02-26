@@ -45,7 +45,7 @@ public class Eloadra extends Module {
     );
 
     private final Setting<Double> accel = sgHorizontal.add(new DoubleSetting.Builder()
-        .name("accelleration")
+        .name("acceleration")
         .description("look at name")
         .defaultValue(3d)
         .range(0d, 10d)
@@ -67,20 +67,18 @@ public class Eloadra extends Module {
         .build()
     );
 
-    private final Setting<Double> uControlSpeed = sgUp.add(new DoubleSetting.Builder()
-        .name("speed")
-        .description("look at name")
-        .defaultValue(5d)
-        .range(0d, 4d)
-        .sliderRange(0d, 4d)
+    private  final Setting<Boolean> resetVel = sgUp.add(new BoolSetting.Builder()
+        .name("reset velocity")
+        .defaultValue(false)
         .build()
     );
 
-    private final Setting<Double> upFactor = sgUp.add(new DoubleSetting.Builder()
+    private final Setting<Double> uControlSpeed = sgUp.add(new DoubleSetting.Builder()
         .name("speed")
-        .description("look at name")
-        .defaultValue(1.2d)
+        .defaultValue(5d)
+        .range(0d, 4d)
         .sliderRange(0d, 4d)
+        .visible(() -> uMode.get() == uModes.CONTROL)
         .build()
     );
 
@@ -137,7 +135,6 @@ public class Eloadra extends Module {
     private enum uModes {
         PACKET,
         CONTROL,
-        CONTROLJITTER,
         GLIDE
     }
 
@@ -164,6 +161,15 @@ public class Eloadra extends Module {
         dir = dir.rotateY(-(float) Math.toRadians(mc.player.getYaw()));
         dir = dir.normalize();
         return dir;
+    }
+
+    private void postTickPacket() {
+        currentSpeed = 0;
+        mc.player.stopGliding();
+        mc.player.getAbilities().flying = true;
+        mc.player.getAbilities().allowFlying = true;
+        mc.player.getAbilities().setFlySpeed((float) (double) packetSpeed.get());
+        mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
     }
 
 
@@ -199,12 +205,7 @@ public class Eloadra extends Module {
         if(!mc.options.jumpKey.isPressed()) {
             switch (hMode.get()) {
                 case PACKET -> {
-                    currentSpeed = 0;
-                    mc.player.stopGliding();
-                    mc.player.getAbilities().flying = true;
-                    mc.player.getAbilities().allowFlying = true;
-                    mc.player.getAbilities().setFlySpeed((float) (double) packetSpeed.get());
-                    mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                    postTickPacket();
                 }
             }
         }
@@ -296,7 +297,7 @@ public class Eloadra extends Module {
                     y *= Math.abs(Math.sin(Math.toRadians(movingUp ? pitch : mc.player.getPitch())));
 
                     ((IVec3d) event.movement).meteor$set(x, y, z);
-                    if (false) {
+                    if (resetVel.get()) {
                         mc.player.setVelocity(0, 0, 0);
                     }
                 }
