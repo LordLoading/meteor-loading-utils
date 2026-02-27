@@ -166,7 +166,6 @@ public class Eloadra extends Module {
 
     private void postTickPacket() {
         currentSpeed = 0;
-        mc.player.stopGliding();
         mc.player.getAbilities().flying = true;
         mc.player.getAbilities().allowFlying = true;
         mc.player.getAbilities().setFlySpeed((float) (double) packetSpeed.get());
@@ -218,6 +217,7 @@ public class Eloadra extends Module {
             if(mc.player.isOnGround() && !onGround.get()) return;
             switch (hMode.get()) {
                 case PACKET -> {
+                    mc.player.stopGliding();
                     mc.player.setPose(EntityPose.STANDING);
                 }
             }
@@ -258,12 +258,18 @@ public class Eloadra extends Module {
         } else {
             switch (uMode.get()) {
                 case CONTROL -> {
-                    if(!mc.player.isGliding()) {
-                        mc.player.getAbilities().allowFlying = false;
-                        mc.player.getAbilities().flying = false;
+                    mc.player.getAbilities().allowFlying = false;
+                    mc.player.getAbilities().flying = false;
+                    if (mc.player.isGliding() && upTick == 0) {
+                        mc.player.stopGliding();
+                        mc.player.setVelocity(Vec3d.ZERO);
+                        return;
                     }
                     upTick++;
-                    if (mc.player.fallDistance > 0 && !mc.player.isGliding() && mc.player.getVelocity().y < 0) mc.player.startGliding();
+                    if (!mc.player.isGliding() && mc.player.getVelocity().y < 0 && upTick > 0) {
+                        mc.player.startGliding();
+                        mc.player.setVelocity(Vec3d.ZERO);
+                    }
                     if (!mc.player.isGliding()) {return;}
                     pitch = 0;
 
