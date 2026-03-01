@@ -202,7 +202,7 @@ public class Eloadra extends Module {
             return;
         }
 
-        if(!mc.options.jumpKey.isPressed()) {
+        if(!mc.options.jumpKey.isPressed() || (mc.options.sneakKey.isPressed() && mc.options.jumpKey.isPressed())) {
             switch (hMode.get()) {
                 case PACKET -> {
                     postTickPacket();
@@ -229,7 +229,7 @@ public class Eloadra extends Module {
 
     @EventHandler
     private void onMove(PlayerMoveEvent event) {
-        if(!mc.options.jumpKey.isPressed()) {
+        if(!mc.options.jumpKey.isPressed() || (mc.options.sneakKey.isPressed() && mc.options.jumpKey.isPressed())) {
             upTick = 0;
             pitch = 0;
 
@@ -324,24 +324,6 @@ public class Eloadra extends Module {
                     event.cancel();
                 }
             }
-        }
-    }
-
-    private void updateControlMovement() {
-        float yaw = mc.player.getYaw();
-
-        float forward = mc.player.input.getMovementInput().y;
-        float sideways = mc.player.input.getMovementInput().x;
-
-        if (forward > 0) {
-            moving = true;
-            yaw += sideways > 0 ? -45 : sideways < 0 ? 45 : 0;
-        } else if (forward < 0) {
-            moving = true;
-            yaw += sideways > 0 ? -135 : sideways < 0 ? 135 : 180;
-        } else {
-            moving = sideways != 0;
-            yaw += sideways > 0 ? -90 : sideways < 0 ? 90 : 0;
         }
     }
 }
