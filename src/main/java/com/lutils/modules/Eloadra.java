@@ -11,8 +11,8 @@ import meteordevelopment.orbit.EventHandler;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Vector3d;
 
 public class Eloadra extends Module {
     private final SettingGroup sgHorizontal = this.settings.createGroup("Horizontal");
@@ -29,7 +29,6 @@ public class Eloadra extends Module {
         .name("speed")
         .description("look at name")
         .defaultValue(5d)
-        .range(0d, 4d)
         .sliderRange(0d, 4d)
         .visible(() -> hMode.get() == hModes.CONTROL)
         .build()
@@ -38,8 +37,7 @@ public class Eloadra extends Module {
     private final Setting<Double> packetSpeed = sgHorizontal.add(new DoubleSetting.Builder()
         .name("speed")
         .description("look at name")
-        .defaultValue(0.36d)
-        .range(0d, 3.0d)
+        .defaultValue(0.15d)
         .sliderRange(0d, 2d)
         .visible(() -> hMode.get() == hModes.PACKET)
         .build()
@@ -49,7 +47,6 @@ public class Eloadra extends Module {
         .name("acceleration")
         .description("look at name")
         .defaultValue(3d)
-        .range(0d, 10d)
         .sliderRange(0d, 10d)
         .build()
     );
@@ -77,9 +74,8 @@ public class Eloadra extends Module {
     private final Setting<Double> uControlSpeed = sgUp.add(new DoubleSetting.Builder()
         .name("speed")
         .defaultValue(5d)
-        .range(0d, 4d)
         .sliderRange(0d, 4d)
-        .visible(() -> uMode.get() == uModes.CONTROL)
+        .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
         .build()
     );
 
@@ -87,6 +83,13 @@ public class Eloadra extends Module {
         .name("Up Timer")
         .defaultValue(10)
         .sliderRange(0, 40)
+        .build()
+    );
+
+    private final Setting<Integer> uBoostInterval = sgUp.add(new IntSetting.Builder()
+        .name("Boost Interval")
+        .defaultValue(50)
+        .sliderRange(10, 100)
         .build()
     );
 
@@ -99,7 +102,6 @@ public class Eloadra extends Module {
         .name("afk timer")
         .description("How long to wait before anti afk kicks in. (ticks)")
         .defaultValue(20)
-        .range(0,200)
         .sliderRange(0, 200)
         .build()
     );
@@ -107,7 +109,6 @@ public class Eloadra extends Module {
     private final Setting<Double> afkSpeed = sgAfk.add(new DoubleSetting.Builder()
         .name("afk speed")
         .defaultValue(0.05)
-        .range(0,2)
         .sliderRange(0,2)
         .build()
     );
@@ -115,7 +116,6 @@ public class Eloadra extends Module {
     private final Setting<Double> afkMinSpeed = sgAfk.add(new DoubleSetting.Builder()
         .name("min afk speed threshold")
         .defaultValue(0.05)
-        .range(0,2)
         .sliderRange(0,2)
         .build()
     );
@@ -123,7 +123,6 @@ public class Eloadra extends Module {
     private final Setting<Double> afkAngle = sgAfk.add(new DoubleSetting.Builder()
         .name("afk angle")
         .defaultValue(3)
-        .range(0, 180)
         .sliderRange(0, 180)
         .build()
     );
@@ -141,11 +140,12 @@ public class Eloadra extends Module {
 
     private int afkTick = 0;
     private double currentSpeed = 0;
-    private double pitch = 0;
     private double upTick = 0;
+    private double pitch = 0;
     private boolean moving;
     private float p;
     private double velocity;
+    private Vec3d oldVelocity;
 
     public Eloadra() {
         super(LUtils.CATEGORY, "Eloadra", "Elytra flight focused on QOL, made for ye olde frog.");
@@ -214,6 +214,7 @@ public class Eloadra extends Module {
     @EventHandler
     private void onPreTick(TickEvent.Pre event) {
         if(!mc.options.jumpKey.isPressed()) {
+            oldVelocity = Vec3d.ZERO;
             if(mc.player.isOnGround() && !onGround.get()) return;
             switch (hMode.get()) {
                 case PACKET -> {
@@ -258,58 +259,66 @@ public class Eloadra extends Module {
         } else {
             switch (uMode.get()) {
                 case CONTROL -> {
+                    if (event.movement.y < 0 || upTick > 0) {
+                        Vec3d movementDir = new Vec3d(0, 0, 1).rotateY(-(float) Math.toRadians(mc.player.getYaw()));
+                        Vec3d mVec = Vec3d.ZERO;
+                        mc.player.getAbilities().allowFlying = false;
+                        mc.player.getAbilities().flying = false;
+                        if (!mc.player.isGliding()) {
+                            mc.player.startGliding();
+                            mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                        }
+
+                        if (upTick < upTimer.get()) {
+                            ((IVec3d)event.movement).meteor$set(0,0,0);
+                            upTick++;
+                            return;
+                        }
+
+                        if (upTick - upTimer.get() > 1 && (upTick - upTimer.get()) % uBoostInterval.get() < 5) {
+                            if (getInputDirection().length() != 0) movementDir = getInputDirection();
+                            currentSpeed += accel.get();
+                            if (currentSpeed > uControlSpeed.get()) currentSpeed = uControlSpeed.get();
+                            mVec = movementDir.multiply(currentSpeed);
+                            oldVelocity = mVec;
+                        } else {
+                            mVec = calcGlideUpVel(oldVelocity, -45, movementDir);
+                            oldVelocity = mVec;
+                        }
+
+                        if (getInputDirection().length() == 0) {
+                            if (upTick % 2 == 0) mVec = mVec.rotateY((float) Math.toRadians(180));
+                        } else {
+                            double hLen = mVec.horizontalLength();
+
+                        }
+                        ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
+
+                        upTick++;
+                    }
+                }
+                case GLIDE -> {
+                    Vec3d movementDir = new Vec3d(0, 0, 1).rotateY(-(float) Math.toRadians(mc.player.getYaw()));
                     mc.player.getAbilities().allowFlying = false;
                     mc.player.getAbilities().flying = false;
-                    if (mc.player.isGliding() && upTick == 0) {
-                        mc.player.stopGliding();
-                        mc.player.setVelocity(Vec3d.ZERO);
+                    if (!mc.player.isGliding()) {
+                        mc.player.startGliding();
+                        mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                    }
+
+                    if (upTick < upTimer.get()) {
+                        ((IVec3d)event.movement).meteor$set(0,0,0);
+                        upTick++;
                         return;
                     }
+                    if (upTick - upTimer.get() > 1 && (upTick - upTimer.get()) % uBoostInterval.get() < 10) {
+                        currentSpeed += accel.get();
+                        if (currentSpeed > uControlSpeed.get()) currentSpeed = uControlSpeed.get();
+                        Vec3d mVec = movementDir.multiply(currentSpeed).add(0, mc.options.sneakKey.isPressed() ? -1 : 0, 0);
+                        ((IVec3d) event.movement).meteor$set(mVec.x, 0, mVec.z);
+                    }
+
                     upTick++;
-                    if (!mc.player.isGliding() && mc.player.getVelocity().y < 0 && upTick > 0) {
-                        mc.player.startGliding();
-                        mc.player.setVelocity(Vec3d.ZERO);
-                    }
-                    if (!mc.player.isGliding()) {return;}
-                    pitch = 0;
-
-                    boolean movingUp = false;
-
-                    if (!mc.options.sneakKey.isPressed() && upTick > upTimer.get() && velocity > uControlSpeed.get() * 0.4) {
-                        p = (float) Math.min(p + 0.1 * (1 - p) * (1 - p) * (1 - p), 1f);
-
-                        pitch = Math.max(Math.max(p, 0) * -90, -90);
-
-                        movingUp = true;
-                        moving = false;
-                    } else {
-                        velocity = uControlSpeed.get();
-                        p = -0.2f;
-                    }
-
-                    velocity = moving ? uControlSpeed.get() : Math.min(velocity + Math.sin(Math.toRadians(pitch)) * 0.08, uControlSpeed.get());
-
-                    Vec3d movementDir = getInputDirection();
-                    if (getInputDirection().length() == 0) {
-                        movementDir = new Vec3d(0, 0, 1).rotateY(-(float) Math.toRadians(mc.player.getYaw()));
-                        if(upTick % 2 == 0) movementDir = movementDir.rotateY((float) Math.toRadians(180));
-                    }
-                    if (upTick <= upTimer.get()) {
-                        movementDir = Vec3d.ZERO;
-                        mc.player.setVelocity(Vec3d.ZERO);
-                    }
-
-
-                    double x = moving && !movingUp ? movementDir.x * uControlSpeed.get() : movingUp ? velocity * Math.cos(Math.toRadians(pitch)) * movementDir.x : 0;
-                    double y = pitch < 0 ? velocity * 1.2 * -Math.sin(Math.toRadians(pitch)) * velocity : 0;
-                    double z = moving && !movingUp ? movementDir.z * uControlSpeed.get() : movingUp ? velocity * Math.cos(Math.toRadians(pitch)) * movementDir.z : 0;
-
-                    y *= Math.abs(Math.sin(Math.toRadians(movingUp ? pitch : mc.player.getPitch())));
-
-                    ((IVec3d) event.movement).meteor$set(x, y, z);
-                    if (resetVel.get()) {
-                        mc.player.setVelocity(0, 0, 0);
-                    }
                 }
             }
         }
@@ -317,13 +326,39 @@ public class Eloadra extends Module {
 
     @EventHandler
     public void onPacketReceive(PacketEvent.Receive event) {
-
-        switch (hMode.get()) {
-            case PACKET -> {
-                if (event.packet instanceof EntityTrackerUpdateS2CPacket && ((EntityTrackerUpdateS2CPacket) event.packet).id() == mc.player.getId() && !mc.options.jumpKey.isPressed()) {
-                    event.cancel();
+        if (!mc.options.jumpKey.isPressed()) {
+            switch (hMode.get()) {
+                case PACKET -> {
+                    if (event.packet instanceof EntityTrackerUpdateS2CPacket && ((EntityTrackerUpdateS2CPacket) event.packet).id() == mc.player.getId()) {
+                        event.cancel();
+                    }
                 }
             }
         }
+    }
+
+    private Vec3d calcGlideUpVel(Vec3d oldVelocity, float pitch, Vec3d inputDir) {
+        Vec3d lookVec = inputDir.add(0, Math.cos(Math.toRadians(pitch)),0).normalize();
+        float piitch = pitch * (float) (Math.PI / 180.0);
+        double d = lookVec.horizontalLength();
+        double e = oldVelocity.horizontalLength();
+        double g = mc.player.getFinalGravity();
+        double h = MathHelper.square(Math.cos(piitch));
+        oldVelocity = oldVelocity.add(0.0, g * (-1.0 + h * 0.75), 0.0);
+        if (oldVelocity.y < 0.0 && d > 0.0) {
+            double i = oldVelocity.y * -0.1 * h;
+            oldVelocity = oldVelocity.add(lookVec.x * i / d, i, lookVec.z * i / d);
+        }
+
+        if (piitch < 0.0F && d > 0.0) {
+            double i = e * -MathHelper.sin(piitch) * 0.04;
+            oldVelocity = oldVelocity.add(-lookVec.x * i / d, i * 3.2, -lookVec.z * i / d);
+        }
+
+        if (d > 0.0) {
+            oldVelocity = oldVelocity.add((lookVec.x / d * e - oldVelocity.x) * 0.1, 0.0, (lookVec.z / d * e - oldVelocity.z) * 0.1);
+        }
+
+        return oldVelocity.multiply(0.99F, 0.98F, 0.99F);
     }
 }
