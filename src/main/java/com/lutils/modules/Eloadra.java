@@ -275,8 +275,8 @@ public class Eloadra extends Module {
                             return;
                         }
 
+                        if (getInputDirection().length() != 0) movementDir = getInputDirection();
                         if (upTick - upTimer.get() > 1 && (upTick - upTimer.get()) % uBoostInterval.get() < 5) {
-                            if (getInputDirection().length() != 0) movementDir = getInputDirection();
                             currentSpeed += accel.get();
                             if (currentSpeed > uControlSpeed.get()) currentSpeed = uControlSpeed.get();
                             mVec = movementDir.multiply(currentSpeed);
@@ -286,12 +286,8 @@ public class Eloadra extends Module {
                             oldVelocity = mVec;
                         }
 
-                        if (getInputDirection().length() == 0) {
-                            if (upTick % 2 == 0) mVec = mVec.rotateY((float) Math.toRadians(180));
-                        } else {
-                            double hLen = mVec.horizontalLength();
+                        if (getInputDirection().length() == 0 && upTick % 2 == 0)  mVec = mVec.rotateY((float) Math.toRadians(180));
 
-                        }
                         ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
 
                         upTick++;
@@ -311,6 +307,7 @@ public class Eloadra extends Module {
                         upTick++;
                         return;
                     }
+
                     if (upTick - upTimer.get() > 1 && (upTick - upTimer.get()) % uBoostInterval.get() < 10) {
                         currentSpeed += accel.get();
                         if (currentSpeed > uControlSpeed.get()) currentSpeed = uControlSpeed.get();
@@ -339,6 +336,9 @@ public class Eloadra extends Module {
 
     private Vec3d calcGlideUpVel(Vec3d oldVelocity, float pitch, Vec3d inputDir) {
         Vec3d lookVec = inputDir.add(0, Math.cos(Math.toRadians(pitch)),0).normalize();
+        System.out.println(lookVec);
+        System.out.println(getInputDirection());
+        System.out.println("\n");
         float piitch = pitch * (float) (Math.PI / 180.0);
         double d = lookVec.horizontalLength();
         double e = oldVelocity.horizontalLength();
