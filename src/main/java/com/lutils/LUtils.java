@@ -3,6 +3,7 @@ package com.lutils;
 import com.lutils.commands.CommandExample;
 import com.lutils.hud.HudExample;
 import com.lutils.modules.Eloadra;
+import com.lutils.modules.Explore;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -24,6 +25,7 @@ public class LUtils extends MeteorAddon {
 
         // Modules
         Modules.get().add(new Eloadra());
+        Modules.get().add(new Explore());
 
         // Commands
         Commands.add(new CommandExample());
