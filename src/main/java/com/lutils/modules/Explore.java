@@ -2,35 +2,34 @@ package com.lutils.modules;
 
 import com.lutils.LUtils;
 import meteordevelopment.meteorclient.events.world.TickEvent;
+import meteordevelopment.meteorclient.mixininterface.IVec3d;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 
 public class Explore extends Module {
     private final SettingGroup sgPattern = this.settings.createGroup("Pattern");
+    private final SettingGroup sgGeneral = this.settings.createGroup("General");
 
     private final Setting<Integer> spiralGap = sgPattern.add(new IntSetting.Builder()
         .name("Spiral Gap")
-        .description("Number of chunks between spiral steps")
+        .description("Number of blocks between spiral steps")
         .defaultValue(4)
         .range(1, 100)
         .sliderRange(1, 100)
         .build()
     );
 
-    private ChunkPos startChunk;
-    private ChunkPos targetChunk;
-    private int spiralX = 0;
-    private int spiralZ = 0;
-    private int steps = 0;
-    private int maxSteps = 1;
-    private int direction = 0; // 0=east, 1=south, 2=west, 3=north
-    private int ticksWaitRemaining = 0;
-    private double lastDistance = Double.MAX_VALUE;
+    private final Setting<Boolean> autoSprint = sgGeneral.add(new BoolSetting.Builder()
+            .name("Auto Sprint")
+            .defaultValue(true)
+            .build()
+    );
+
+    private int step = 0;
+    private Vec3d direction = new Vec3d(1, 0, 0);
+    private Vec3d target;
 
     public Explore() {
         super(LUtils.CATEGORY, "Explore", "Explore the world in effective patterns from a starting point.");
@@ -39,16 +38,12 @@ public class Explore extends Module {
     @Override
     public void onActivate() {
         if (mc.player == null) return;
-
-        startChunk = new ChunkPos(mc.player.getBlockPos());
-        spiralX = 0;
-        spiralZ = 0;
-        steps = 0;
-        maxSteps = 1;
-        direction = 0;
+        step = 0;
+        target = mc.player.getPos();
+        direction = new Vec3d(1, 0, 0);
 
         getNextTarget();
-        setDirectionToTarget();
+        setDirectionToTarget(target);
     }
 
     @Override
@@ -59,68 +54,35 @@ public class Explore extends Module {
     private void getNextTarget() {
         int gap = spiralGap.get();
 
-        switch (direction) {
-            case 0 -> spiralX += gap; // east
-            case 1 -> spiralZ += gap; // south
-            case 2 -> spiralX -= gap; // west
-            case 3 -> spiralZ -= gap; // north
-        }
+        direction = direction.rotateY((float) Math.toRadians(90));
+        ((IVec3d) direction).meteor$set(Math.round(direction.x), 0, Math.round(direction.z));
+        target = target.add(direction.multiply((step + 2) * gap));
 
-        steps++;
-
-        if (steps >= maxSteps) {
-            steps = 0;
-            direction = (direction + 1) % 4;
-
-            if (direction % 2 == 0) {
-                maxSteps++;
-            }
-        }
-
-        targetChunk = new ChunkPos(startChunk.x + spiralX, startChunk.z + spiralZ);
+        mc.player.setVelocity(Vec3d.ZERO);
+        step++;
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if (mc.player == null || targetChunk == null) return;
+        if (mc.player == null) return;
 
-        if (ticksWaitRemaining > 0) {
-            mc.player.setVelocity(0, 0, 0);
-            mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getX(), mc.player.getY(), mc.player.getZ(), mc.player.isOnGround(), mc.player.horizontalCollision));
-            setDirectionToTarget();
-            ticksWaitRemaining--;
-            return;
-        }
+        if (direction.x == 1 && mc.player.getPos().x > target.x) getNextTarget();
+        else if (direction.x == -1 && mc.player.getPos().x < target.x) getNextTarget();
+        else if (direction.z == 1 && mc.player.getPos().z > target.z) getNextTarget();
+        else if (direction.z == -1 && mc.player.getPos().z < target.z) getNextTarget();
 
-        Vec3d playerPos = mc.player.getEyePos();
-        Vec3d targetPos = getChunkCenter(targetChunk);
-
-        Vec3d toTarget = targetPos.subtract(playerPos);
-        double distance = toTarget.length();
-
-        if (distance < 3 || distance > lastDistance) {
-            resetMovement();
-            getNextTarget();
-            ticksWaitRemaining = 10;
-            lastDistance = Double.MAX_VALUE;
-            return;
-        }
-
-        lastDistance = distance;
-
-        setDirectionToTarget();
+        setDirectionToTarget(target);
 
         mc.options.forwardKey.setPressed(true);
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
+        if(autoSprint.get()) mc.options.sprintKey.setPressed(true);
     }
 
-    private void setDirectionToTarget() {
-        if (mc.player == null || targetChunk == null) return;
-
+    private void setDirectionToTarget(Vec3d targetPos) {
+        if (mc.player == null) return;
         Vec3d playerPos = mc.player.getEyePos();
-        Vec3d targetPos = getChunkCenter(targetChunk);
 
         Vec3d diff = targetPos.subtract(playerPos);
 
@@ -129,14 +91,6 @@ public class Explore extends Module {
         mc.player.setYaw(yaw);
 
         mc.player.setHeadYaw(yaw);
-    }
-
-    private Vec3d getChunkCenter(ChunkPos chunk) {
-        double x = (chunk.x << 4) + 8;
-        double z = (chunk.z << 4) + 8;
-        double y = mc.player != null ? mc.player.getY() : 64;
-
-        return new Vec3d(x, y, z);
     }
 
     private void resetMovement() {
