@@ -2,6 +2,7 @@ package com.lutils;
 
 import com.lutils.commands.CommandExample;
 import com.lutils.hud.HudExample;
+import com.lutils.modules.AutoDrool;
 import com.lutils.modules.Eloadra;
 import com.lutils.modules.Explore;
 import com.mojang.logging.LogUtils;
@@ -26,6 +27,7 @@ public class LUtils extends MeteorAddon {
         // Modules
         Modules.get().add(new Eloadra());
         Modules.get().add(new Explore());
+        Modules.get().add(new AutoDrool());
 
         // Commands
         Commands.add(new CommandExample());
