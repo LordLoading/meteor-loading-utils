@@ -65,16 +65,18 @@ public class Eloadra extends Module {
         .build()
     );
 
-    private  final Setting<Boolean> resetVel = sgUp.add(new BoolSetting.Builder()
-        .name("reset velocity")
-        .defaultValue(false)
-        .build()
-    );
-
     private final Setting<Double> uControlSpeed = sgUp.add(new DoubleSetting.Builder()
         .name("speed")
         .defaultValue(5d)
         .sliderRange(0d, 4d)
+        .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
+        .build()
+    );
+
+    private final Setting<Double> uControlPitch = sgUp.add(new DoubleSetting.Builder()
+        .name("pitch")
+        .defaultValue(45d)
+        .sliderRange(0d, 90d)
         .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
         .build()
     );
@@ -133,7 +135,6 @@ public class Eloadra extends Module {
     }
 
     private enum uModes {
-        PACKET,
         CONTROL,
         GLIDE
     }
@@ -141,10 +142,6 @@ public class Eloadra extends Module {
     private int afkTick = 0;
     private double currentSpeed = 0;
     private double upTick = 0;
-    private double pitch = 0;
-    private boolean moving;
-    private float p;
-    private double velocity;
     private Vec3d oldVelocity;
 
     public Eloadra() {
@@ -232,7 +229,6 @@ public class Eloadra extends Module {
     private void onMove(PlayerMoveEvent event) {
         if(!mc.options.jumpKey.isPressed() || (mc.options.sneakKey.isPressed() && mc.options.jumpKey.isPressed())) {
             upTick = 0;
-            pitch = 0;
 
             switch (hMode.get()) {
                 case CONTROL -> {
@@ -253,7 +249,6 @@ public class Eloadra extends Module {
                     if (currentSpeed > controlSpeed.get()) currentSpeed = controlSpeed.get();
                     Vec3d mVec = getInputDirection().multiply(currentSpeed).add(0, mc.options.sneakKey.isPressed() ? -1 : 0, 0);
                     ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
-                    pitch = -0.2;
                 }
             }
         } else {
@@ -280,12 +275,13 @@ public class Eloadra extends Module {
                             currentSpeed += accel.get();
                             if (currentSpeed > uControlSpeed.get()) currentSpeed = uControlSpeed.get();
                             mVec = movementDir.multiply(currentSpeed);
-                            oldVelocity = mVec;
+                            oldVelocity = new Vec3d(0,0,1).multiply(mVec.horizontalLength()).add(0,mVec.y,0);
                         } else {
-                            mVec = calcGlideUpVel(oldVelocity, -45, movementDir);
+                            mVec = calcGlideUpVel(oldVelocity, (float) -uControlPitch.get(), new Vec3d(0,0,1));
                             oldVelocity = mVec;
                         }
 
+                        mVec = movementDir.multiply(mVec.horizontalLength()).add(0,mVec.y,0);
                         if (getInputDirection().length() == 0 && upTick % 2 == 0)  mVec = mVec.rotateY((float) Math.toRadians(180));
 
                         ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
