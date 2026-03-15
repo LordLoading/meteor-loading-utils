@@ -182,7 +182,7 @@ public class Explore extends Module {
     private boolean hasReachedSpiralTarget() {
         if (mc.player == null || target == null) return false;
 
-        Vec3d playerPos = mc.player.getPos();
+        Vec3d playerPos = mc.player.getEntityPos();
 
         if (Math.abs(direction.x) > 0.5) {
             if (direction.x > 0 && playerPos.x > target.x) return true;
@@ -211,7 +211,7 @@ public class Explore extends Module {
     private boolean hasReachedSquareTarget() {
         if (mc.player == null || target == null) return false;
 
-        Vec3d playerPos = mc.player.getPos();
+        Vec3d playerPos = mc.player.getEntityPos();
 
         if (Math.abs(direction.x) > 0.5) {
             if (direction.x > 0 && playerPos.x > target.x) return true;
@@ -324,7 +324,7 @@ public class Explore extends Module {
         if (mc.player == null || isPaused) return;
 
         pausedState = new ExploreState(
-            mc.player.getPos(),
+            mc.player.getEntityPos(),
             target,
             direction,
             step,
@@ -368,7 +368,7 @@ public class Explore extends Module {
 
         switch (patternType.get()) {
             case SPIRAL -> {
-                target = mc.player.getPos();
+                target = mc.player.getEntityPos();
                 getNextSpiralTarget();
             }
             case SQUARE -> initializeSquarePattern();
@@ -394,10 +394,10 @@ public class Explore extends Module {
         info("Square radius: " + squareRadius.get() + " blocks");
         info("Direction: " + (clockwiseDirection.get() ? "Clockwise" : "Counter-clockwise"));
 
-        target = findNearestSquarePoint(mc.player.getPos());
+        target = findNearestSquarePoint(mc.player.getEntityPos());
 
         if (target != null) {
-            Vec3d dirToTarget = target.subtract(mc.player.getPos()).normalize();
+            Vec3d dirToTarget = target.subtract(mc.player.getEntityPos()).normalize();
             direction = new Vec3d(Math.round(dirToTarget.x), 0, Math.round(dirToTarget.z));
         }
     }
