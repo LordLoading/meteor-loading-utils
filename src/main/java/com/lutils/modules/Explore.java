@@ -1,6 +1,7 @@
 package com.lutils.modules;
 
 import com.lutils.LUtils;
+import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.mixininterface.IVec3d;
 import meteordevelopment.meteorclient.settings.*;
@@ -130,15 +131,6 @@ public class Explore extends Module {
         .build()
     );
 
-    private final Setting<Double> resumeThreshold = sgPause.add(new DoubleSetting.Builder()
-        .name("Resume Threshold")
-        .description("Max distance player can move before resetting pattern")
-        .defaultValue(5.0)
-        .range(0.5, 50.0)
-        .sliderRange(0.5, 20.0)
-        .build()
-    );
-
     private final Setting<Boolean> autoSprint = sgGeneral.add(new BoolSetting.Builder()
             .name("Auto Sprint")
             .defaultValue(true)
@@ -158,17 +150,22 @@ public class Explore extends Module {
     private int cornersVisited = 0;
 
     public Explore() {
-        super(LUtils.CATEGORY, "Explore", "Explore the world in effective patterns from a starting point.");
+        super(LUtils.CATEGORY, "Explore", "Automatically explores the world.");
     }
 
     @Override
     public void onActivate() {
         if (mc.player == null) return;
 
-        if (persistState.get() && pausedState != null && !pauseToggle.get()) {
-            resumeExploration();
+        if(pauseToggle.get()) {
+            pauseExploration();
             return;
         }
+
+//        if (persistState.get() && pausedState != null && !pauseToggle.get()) {
+//            resumeExploration();
+//            return;
+//        }
 
         resetExploration();
     }
@@ -271,10 +268,8 @@ public class Explore extends Module {
     private void onTick(TickEvent.Post event) {
         if (mc.player == null) return;
 
-
         // Skip if paused
-        if (isPaused) {
-            resetMovement();
+        if (isPaused || target == null) {
             return;
         }
 
@@ -349,22 +344,13 @@ public class Explore extends Module {
     private void resumeExploration() {
         if (mc.player == null || !isPaused || pausedState == null) return;
 
-        Vec3d currentPos = mc.player.getPos();
-        double distanceMoved = currentPos.distanceTo(pausedState.playerPos);
+        target = pausedState.target;
+        direction = pausedState.direction;
+        step = pausedState.step;
+        squareCenter = pausedState.squareCenter;
+        squareCorner = pausedState.squareCorner;
+        info("Exploration resumed from saved state");
 
-        if (distanceMoved > resumeThreshold.get()) {
-            warning("Player moved %.1f blocks while paused (threshold: %.1f). Resetting pattern.",
-                    distanceMoved, resumeThreshold.get());
-            resetExploration();
-        } else {
-            target = pausedState.target;
-            direction = pausedState.direction;
-            step = pausedState.step;
-            squareCenter = pausedState.squareCenter;
-            squareCorner = pausedState.squareCorner;
-
-            info("Exploration resumed from saved state");
-        }
 
         isPaused = false;
         pausedState = null;
