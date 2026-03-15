@@ -123,7 +123,7 @@ public class AutoDrool extends Module {
     }
 
     public AutoDrool() {
-        super(LUtils.CATEGORY, "auto-drool", "Automatically switches to the most effective tool from the entire inventory when performing an action.");
+        super(LUtils.CATEGORY, "auto-drool", "Basically just the regular meteor autotool but it also takes tools from your inventory.");
     }
 
     @Override
