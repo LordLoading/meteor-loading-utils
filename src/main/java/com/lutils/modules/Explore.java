@@ -201,7 +201,7 @@ public class Explore extends Module {
         int gap = spiralGap.get();
 
         direction = direction.rotateY((float) Math.toRadians(90));
-        ((IVec3d) direction).meteor$set(Math.round(direction.x), 0, Math.round(direction.z));
+        ((IVec3d) direction).set(Math.round(direction.x), 0, Math.round(direction.z));
         target = target.add(direction.multiply((step + 2) * gap));
 
         mc.player.setVelocity(Vec3d.ZERO);

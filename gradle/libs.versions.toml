@@ -2,15 +2,15 @@
 mod-version = "0.1.0"
 
 # Fabric (https://fabricmc.net/develop)
-minecraft = "1.21.4"
-yarn-mappings = "1.21.4+build.7"
+minecraft = "1.21.1"
+yarn-mappings = "1.21.1+build.3"
 fabric-loader = "0.18.2"
 
 # Loom (https://github.com/FabricMC/fabric-loom)
 loom = "1.14-SNAPSHOT"
 
 # Meteor (https://github.com/MeteorDevelopment/meteor-client/)
-meteor = "1.21.4-SNAPSHOT"
+meteor = "0.5.8-SNAPSHOT"
 
 # Mods
 
