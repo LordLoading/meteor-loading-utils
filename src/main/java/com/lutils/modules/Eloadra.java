@@ -174,7 +174,7 @@ public class Eloadra extends Module {
         mc.player.getAbilities().flying = false;
         mc.player.getAbilities().allowFlying = false;
         mc.player.getAbilities().setFlySpeed(1);
-        mc.player.stopGliding();
+        mc.player.stopFallFlying();
         afkTick = 0;
     }
 
@@ -194,7 +194,7 @@ public class Eloadra extends Module {
         }
 
         if(mc.player.isOnGround() && !onGround.get()) {
-            mc.player.stopGliding();
+            mc.player.stopFallFlying();
             mc.player.getAbilities().flying = false;
             return;
         }
@@ -215,7 +215,7 @@ public class Eloadra extends Module {
             if(mc.player.isOnGround() && !onGround.get()) return;
             switch (hMode.get()) {
                 case PACKET -> {
-                    mc.player.stopGliding();
+                    mc.player.stopFallFlying();
                     mc.player.setPose(EntityPose.STANDING);
                 }
             }
@@ -232,23 +232,23 @@ public class Eloadra extends Module {
 
             switch (hMode.get()) {
                 case CONTROL -> {
-                    if(!mc.player.isGliding()) return;
+                    if(!mc.player.isFallFlying()) return;
 
                     if (getInputDirection().length() == 0) {
                         currentSpeed = 0;
                         if (mc.options.sneakKey.isPressed()) {
                             mc.player.setVelocity(0, -0.5, 0);
-                            ((IVec3d) event.movement).meteor$set(0,-0.5,0);
+                            ((IVec3d) event.movement).set(0,-0.5,0);
                         } else {
                             mc.player.setVelocity(Vec3d.ZERO);
-                            ((IVec3d) event.movement).meteor$set(0, 0, 0);
+                            ((IVec3d) event.movement).set(0, 0, 0);
                         }
                         return;
                     }
                     currentSpeed += accel.get();
                     if (currentSpeed > controlSpeed.get()) currentSpeed = controlSpeed.get();
                     Vec3d mVec = getInputDirection().multiply(currentSpeed).add(0, mc.options.sneakKey.isPressed() ? -1 : 0, 0);
-                    ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
+                    ((IVec3d) event.movement).set(mVec.x, mVec.y, mVec.z);
                 }
             }
         } else {
@@ -259,13 +259,13 @@ public class Eloadra extends Module {
                         Vec3d mVec = Vec3d.ZERO;
                         mc.player.getAbilities().allowFlying = false;
                         mc.player.getAbilities().flying = false;
-                        if (!mc.player.isGliding()) {
-                            mc.player.startGliding();
+                        if (!mc.player.isFallFlying()) {
+                            mc.player.startFallFlying();
                             mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
                         }
 
                         if (upTick < upTimer.get()) {
-                            ((IVec3d)event.movement).meteor$set(0,0,0);
+                            ((IVec3d)event.movement).set(0,0,0);
                             upTick++;
                             return;
                         }
@@ -284,7 +284,7 @@ public class Eloadra extends Module {
                         mVec = movementDir.multiply(mVec.horizontalLength()).add(0,mVec.y,0);
                         if (getInputDirection().length() == 0 && upTick % 2 == 0)  mVec = mVec.rotateY((float) Math.toRadians(180));
 
-                        ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
+                        ((IVec3d) event.movement).set(mVec.x, mVec.y, mVec.z);
 
                         upTick++;
                     }
@@ -293,13 +293,13 @@ public class Eloadra extends Module {
                     Vec3d movementDir = new Vec3d(0, 0, 1).rotateY(-(float) Math.toRadians(mc.player.getYaw()));
                     mc.player.getAbilities().allowFlying = false;
                     mc.player.getAbilities().flying = false;
-                    if (!mc.player.isGliding()) {
-                        mc.player.startGliding();
+                    if (!mc.player.isFallFlying()) {
+                        mc.player.isFallFlying();
                         mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
                     }
 
                     if (upTick < upTimer.get()) {
-                        ((IVec3d)event.movement).meteor$set(0,0,0);
+                        ((IVec3d)event.movement).set(0,0,0);
                         upTick++;
                         return;
                     }
@@ -308,7 +308,7 @@ public class Eloadra extends Module {
                         currentSpeed += accel.get();
                         if (currentSpeed > uControlSpeed.get()) currentSpeed = uControlSpeed.get();
                         Vec3d mVec = movementDir.multiply(currentSpeed).add(0, mc.options.sneakKey.isPressed() ? -1 : 0, 0);
-                        ((IVec3d) event.movement).meteor$set(mVec.x, 0, mVec.z);
+                        ((IVec3d) event.movement).set(mVec.x, 0, mVec.z);
                     }
 
                     upTick++;
