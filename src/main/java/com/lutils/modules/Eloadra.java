@@ -26,7 +26,7 @@ public class Eloadra extends Module {
     );
 
     private final Setting<Double> controlSpeed = sgHorizontal.add(new DoubleSetting.Builder()
-        .name("speed")
+        .name("control speed")
         .description("look at name")
         .defaultValue(5d)
         .sliderRange(0d, 4d)
@@ -35,7 +35,7 @@ public class Eloadra extends Module {
     );
 
     private final Setting<Double> packetSpeed = sgHorizontal.add(new DoubleSetting.Builder()
-        .name("speed")
+        .name("packet speed")
         .description("look at name")
         .defaultValue(0.15d)
         .sliderRange(0d, 2d)
@@ -173,8 +173,7 @@ public class Eloadra extends Module {
     public void onDeactivate() {
         mc.player.getAbilities().flying = false;
         mc.player.getAbilities().allowFlying = false;
-        mc.player.getAbilities().setFlySpeed(1);
-        mc.player.stopFallFlying();
+        mc.player.stopGliding();
         afkTick = 0;
     }
 
