@@ -173,7 +173,7 @@ public class Eloadra extends Module {
     public void onDeactivate() {
         mc.player.getAbilities().flying = false;
         mc.player.getAbilities().allowFlying = false;
-        mc.player.stopGliding();
+        mc.player.startFallFlying();
         afkTick = 0;
     }
 
