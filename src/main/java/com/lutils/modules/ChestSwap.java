@@ -22,21 +22,16 @@ public class ChestSwap extends Module {
 
     @Override
     public void onActivate() {
-        boolean ely = mc.player.getInventory().getArmorStack(38).getItem() == Items.ELYTRA;
+        boolean ely = mc.player.getInventory().getArmorStack(2).getItem() == Items.ELYTRA;
         int highestScore = 0;
         int bestSlot = -1;
         for (int i = 0; i < mc.player.getInventory().size(); i++) {
+            ItemStack iStack = mc.player.getInventory().getStack(i);
+            int binding = Utils.getEnchantmentLevel(iStack, Enchantments.BINDING_CURSE);
+            if (binding != 0) continue;
             if (ely) {
-                if (ely)
-            } else {
                 int currentScore = -1;
-                ItemStack iStack = mc.player.getInventory().getStack(i);
-                int binding = Utils.getEnchantmentLevel(iStack, Enchantments.BINDING_CURSE);
                 int prot = Utils.getEnchantmentLevel(iStack, Enchantments.PROTECTION);
-
-                if (binding != 0) {
-                    continue;
-                }
 
                 if (isChestplate(iStack)) {
                     System.out.println(i);
@@ -45,9 +40,8 @@ public class ChestSwap extends Module {
                         highestScore = score;
                         bestSlot = i;
                     }
-                    ;
                 }
-            }
+            } else if(iStack.getItem() == Items.ELYTRA) bestSlot = i;
         }
 
         if (bestSlot != -1) {
@@ -55,6 +49,7 @@ public class ChestSwap extends Module {
             InvUtils.move().from(bestSlot).toArmor(2);
             InvUtils.click().to(bestSlot);
         }
+        this.toggle();
     }
 
     boolean isChestplate (ItemStack iStack) {
