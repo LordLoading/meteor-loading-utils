@@ -74,20 +74,8 @@ public class ChestSwap extends Module {
         score += Utils.getEnchantmentLevel(itemStack, Enchantments.UNBREAKING);
         score += 2 * Utils.getEnchantmentLevel(itemStack, Enchantments.MENDING);
 
-        if (itemStack.contains(DataComponentTypes.ATTRIBUTE_MODIFIERS)) {
-            AttributeModifiersComponent component = itemStack.get(DataComponentTypes.ATTRIBUTE_MODIFIERS);
-            for (AttributeModifiersComponent.Entry modifier : component.modifiers()) {
-                if (modifier.attribute() == EntityAttributes.ARMOR || modifier.attribute() == EntityAttributes.ARMOR_TOUGHNESS) {
-                    double e = modifier.modifier().value();
+        if(itemStack.getItem() instanceof ArmorItem) score += (int) (((ArmorItem) itemStack.getItem()).getToughness() * 2);
 
-                    score += (int) switch (modifier.modifier().operation()) {
-                        case ADD_VALUE -> e;
-                        case ADD_MULTIPLIED_BASE -> e * mc.player.getAttributeBaseValue(modifier.attribute());
-                        case ADD_MULTIPLIED_TOTAL -> e * score;
-                    };
-                }
-            }
-        }
         return score;
     }
 }
