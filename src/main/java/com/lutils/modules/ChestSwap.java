@@ -9,8 +9,6 @@ import net.minecraft.component.type.AttributeModifiersComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.RegistryKey;
@@ -22,7 +20,7 @@ public class ChestSwap extends Module {
 
     @Override
     public void onActivate() {
-        boolean ely = mc.player.getInventory().getArmorStack(2).getItem() == Items.ELYTRA;
+        boolean ely = mc.player.getInventory().getStack(38).getItem() == Items.ELYTRA;
         int highestScore = 0;
         int bestSlot = -1;
         for (int i = 0; i < mc.player.getInventory().size(); i++) {
