@@ -142,7 +142,7 @@ public class Eloadra extends Module {
     private int afkTick = 0;
     private double currentSpeed = 0;
     private double upTick = 0;
-    private Vec3d oldVelocity;
+    private Vec3d oldVelocity = Vec3d.ZERO;
 
     public Eloadra() {
         super(LUtils.CATEGORY, "Eloadra", "Elytra flight focused on QOL, made for ye olde frog.");
