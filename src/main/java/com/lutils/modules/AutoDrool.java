@@ -1,3 +1,5 @@
+// skidded from meteor, modified by zOnlyKroks
+
 package com.lutils.modules;
 
 import com.lutils.LUtils;
@@ -44,6 +46,21 @@ public class AutoDrool extends Module {
         .name("fortune-for-ores-and-crops")
         .description("Mines Ores and crops only with the Fortune enchantment.")
         .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<Boolean> useToolSlot = sgGeneral.add(new BoolSetting.Builder()
+        .name("use tool slot")
+        .description("restrict inv swapping to a specific hotbar slot")
+        .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<Integer> toolSlot = sgGeneral.add(new IntSetting.Builder()
+        .name("tool slot")
+        .defaultValue(1)
+        .range(1, 9)
+        .visible(() -> useToolSlot.get())
         .build()
     );
 
@@ -206,6 +223,9 @@ public class AutoDrool extends Module {
                 if (bestSlot < 9) {
                     InvUtils.swap(bestSlot, true);
                 } else {
+                    if(useToolSlot.get()) {
+                        InvUtils.swap(toolSlot.get()-1, true);
+                    }
                     int hotbarSlot = mc.player.getInventory().selectedSlot;
                     ItemStack originalItem = mc.player.getInventory().getStack(hotbarSlot).copy();
 
