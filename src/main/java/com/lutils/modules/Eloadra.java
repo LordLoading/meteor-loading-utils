@@ -69,7 +69,7 @@ public class Eloadra extends Module {
         .name("speed")
         .defaultValue(5d)
         .sliderRange(0d, 4d)
-        .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
+        .visible(() -> true)
         .build()
     );
 
@@ -77,7 +77,7 @@ public class Eloadra extends Module {
         .name("pitch")
         .defaultValue(45d)
         .sliderRange(0d, 90d)
-        .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
+        .visible(() -> true)
         .build()
     );
 
@@ -136,7 +136,8 @@ public class Eloadra extends Module {
 
     private enum uModes {
         CONTROL,
-        GLIDE
+        GLIDE,
+        CONTROL_STRAIGHT
     }
 
     private int afkTick = 0;
@@ -311,6 +312,20 @@ public class Eloadra extends Module {
                     }
 
                     upTick++;
+                }
+                case CONTROL_STRAIGHT -> {
+                    if (event.movement.y < 0 || upTick > 0) {
+                        mc.player.getAbilities().allowFlying = false;
+                        mc.player.getAbilities().flying = false;
+                        if (!mc.player.isGliding()) {
+                            mc.player.startGliding();
+                            mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                        }
+                        if(upTick > upTimer.get()) {
+                            ((IVec3d) event.movement).meteor$set(getInputDirection().x * uControlSpeed.get(), uControlSpeed.get(), getInputDirection().z * uControlSpeed.get());
+                        }
+                        upTick++;
+                    }
                 }
             }
         }
