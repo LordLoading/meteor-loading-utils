@@ -77,7 +77,7 @@ public class Eloadra extends Module {
         .name("pitch")
         .defaultValue(45d)
         .sliderRange(0d, 90d)
-        .visible(() -> true)
+        .visible(() -> uMode.get() == uModes.CONTROL)
         .build()
     );
 
@@ -92,6 +92,7 @@ public class Eloadra extends Module {
         .name("Boost Interval")
         .defaultValue(50)
         .sliderRange(10, 100)
+        .visible(() -> uMode.get() == uModes.GLIDE || uMode.get() == uModes.CONTROL)
         .build()
     );
 
