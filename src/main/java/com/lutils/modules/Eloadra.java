@@ -58,6 +58,14 @@ public class Eloadra extends Module {
         .build()
     );
 
+    private final Setting<Boolean> lowHover = sgHorizontal.add(new BoolSetting.Builder()
+        .name("Auto Low Hover")
+        .description("Automatically hovers low to the ground on activation for tunnel travel.")
+        .defaultValue(false)
+        .visible(() -> hMode.get() == hModes.PACKET)
+        .build()
+    );
+
     private final Setting<uModes> uMode = sgUp.add(new EnumSetting.Builder<uModes>()
         .name("Up Mode")
         .description("mode for flying upwards")
@@ -177,6 +185,12 @@ public class Eloadra extends Module {
         mc.player.getAbilities().allowFlying = false;
         mc.player.stopGliding();
         afkTick = 0;
+    }
+
+    public void onActivate() {
+        if(mc.player.isOnGround() && lowHover.get()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, 0.1, mc.player.getVelocity().z);
+        }
     }
 
     @EventHandler
