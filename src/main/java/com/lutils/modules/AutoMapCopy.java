@@ -5,9 +5,7 @@ import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
-import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Module;
-import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
@@ -28,6 +26,17 @@ public class AutoMapCopy extends Module {
         .build()
     ));
 
+    private final Setting<Integer> delay = sgGeneral.add((new IntSetting.Builder()
+        .name("Delay")
+        .description("How long to wait before copying the map.")
+        .range(1, 5)
+        .sliderRange(1, 5)
+        .defaultValue(1)
+        .build()
+    ));
+
+    private int ticks = 0;
+
     public AutoMapCopy() {
         super(LUtils.CATEGORY, "Auto Map Copy", "Automatically copies every map in your inventory");
     }
@@ -43,11 +52,15 @@ public class AutoMapCopy extends Module {
         InvUtils.shiftClick().slotId(2);
         InvUtils.shiftClick().slotId(3);
         InvUtils.shiftClick().slotId(4);
-
+        ticks = 0;
     }
 
     @EventHandler
     private void onTick(TickEvent.Post tickEvent) {
+        if(ticks % delay.get() != 0) {
+            ticks++;
+            return;
+        };
         if(!(mc.player.currentScreenHandler instanceof PlayerScreenHandler)) {
             toggle();
         }
@@ -79,5 +92,6 @@ public class AutoMapCopy extends Module {
             }
         }
 
+        ticks++;
     }
 }
