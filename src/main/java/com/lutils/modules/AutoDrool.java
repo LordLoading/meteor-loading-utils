@@ -1,3 +1,5 @@
+// skidded from meteor, modified by zOnlyKroks
+
 package com.lutils.modules;
 
 import com.lutils.LUtils;
@@ -46,6 +48,21 @@ public class AutoDrool extends Module {
         .name("fortune-for-ores-and-crops")
         .description("Mines Ores and crops only with the Fortune enchantment.")
         .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<Boolean> useToolSlot = sgGeneral.add(new BoolSetting.Builder()
+        .name("use tool slot")
+        .description("restrict inv swapping to a specific hotbar slot")
+        .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<Integer> toolSlot = sgGeneral.add(new IntSetting.Builder()
+        .name("tool slot")
+        .defaultValue(1)
+        .range(1, 9)
+        .visible(() -> useToolSlot.get())
         .build()
     );
 
@@ -125,7 +142,7 @@ public class AutoDrool extends Module {
     }
 
     public AutoDrool() {
-        super(LUtils.CATEGORY, "auto-drool", "Automatically switches to the most effective tool from the entire inventory when performing an action.");
+        super(LUtils.CATEGORY, "auto-drool", "Basically just the regular meteor autotool but it also takes tools from your inventory.");
     }
 
     @Override
@@ -208,6 +225,9 @@ public class AutoDrool extends Module {
                 if (bestSlot < 9) {
                     InvUtils.swap(bestSlot, true);
                 } else {
+                    if(useToolSlot.get()) {
+                        InvUtils.swap(toolSlot.get()-1, true);
+                    }
                     int hotbarSlot = mc.player.getInventory().getSelectedSlot();
                     ItemStack originalItem = mc.player.getInventory().getStack(hotbarSlot).copy();
 
@@ -256,7 +276,7 @@ public class AutoDrool extends Module {
 
     public static double getScore(ItemStack itemStack, BlockState state, boolean silkTouchEnderChest, boolean fortuneOre, EnchantPreference enchantPreference, Predicate<ItemStack> good) {
         if (!good.test(itemStack) || !isTool(itemStack)) return -1;
-        if (!itemStack.isSuitableFor(state) && !(itemStack.isIn(ItemTags.SWORDS) && (state.getBlock() instanceof BambooBlock || state.getBlock() instanceof BambooShootBlock)) && !(itemStack.getItem() instanceof ShearsItem && state.getBlock() instanceof LeavesBlock || state.isIn(BlockTags.WOOL))) return -1;
+        if (!itemStack.isSuitableFor(state) && !(itemStack.getItem() instanceof SwordItem && (state.getBlock() instanceof BambooBlock || state.getBlock() instanceof BambooShootBlock)) && !(itemStack.getItem() instanceof ShearsItem && state.getBlock() instanceof LeavesBlock || state.isIn(BlockTags.WOOL))) return -1;
 
         if (silkTouchEnderChest
             && state.getBlock() == Blocks.ENDER_CHEST

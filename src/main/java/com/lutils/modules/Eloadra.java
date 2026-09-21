@@ -58,6 +58,14 @@ public class Eloadra extends Module {
         .build()
     );
 
+    private final Setting<Boolean> lowHover = sgHorizontal.add(new BoolSetting.Builder()
+        .name("Auto Low Hover")
+        .description("Automatically hovers low to the ground on activation for tunnel travel.")
+        .defaultValue(false)
+        .visible(() -> hMode.get() == hModes.PACKET)
+        .build()
+    );
+
     private final Setting<uModes> uMode = sgUp.add(new EnumSetting.Builder<uModes>()
         .name("Up Mode")
         .description("mode for flying upwards")
@@ -69,7 +77,7 @@ public class Eloadra extends Module {
         .name("speed")
         .defaultValue(5d)
         .sliderRange(0d, 4d)
-        .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
+        .visible(() -> true)
         .build()
     );
 
@@ -77,7 +85,7 @@ public class Eloadra extends Module {
         .name("pitch")
         .defaultValue(45d)
         .sliderRange(0d, 90d)
-        .visible(() -> uMode.get() == uModes.CONTROL || uMode.get() == uModes.GLIDE)
+        .visible(() -> uMode.get() == uModes.CONTROL)
         .build()
     );
 
@@ -92,6 +100,7 @@ public class Eloadra extends Module {
         .name("Boost Interval")
         .defaultValue(50)
         .sliderRange(10, 100)
+        .visible(() -> uMode.get() == uModes.GLIDE || uMode.get() == uModes.CONTROL)
         .build()
     );
 
@@ -136,7 +145,8 @@ public class Eloadra extends Module {
 
     private enum uModes {
         CONTROL,
-        GLIDE
+        GLIDE,
+        CONTROL_STRAIGHT
     }
 
     private int afkTick = 0;
@@ -175,6 +185,12 @@ public class Eloadra extends Module {
         mc.player.getAbilities().allowFlying = false;
         mc.player.stopGliding();
         afkTick = 0;
+    }
+
+    public void onActivate() {
+        if(mc.player.isOnGround() && lowHover.get()) {
+            mc.player.setVelocity(mc.player.getVelocity().x, 0.1, mc.player.getVelocity().z);
+        }
     }
 
     @EventHandler
@@ -311,6 +327,20 @@ public class Eloadra extends Module {
                     }
 
                     upTick++;
+                }
+                case CONTROL_STRAIGHT -> {
+                    if (event.movement.y < 0 || upTick > 0) {
+                        mc.player.getAbilities().allowFlying = false;
+                        mc.player.getAbilities().flying = false;
+                        if (!mc.player.isGliding()) {
+                            mc.player.startGliding();
+                            mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+                        }
+                        if(upTick > upTimer.get()) {
+                            ((IVec3d) event.movement).meteor$set(getInputDirection().x * uControlSpeed.get(), uControlSpeed.get(), getInputDirection().z * uControlSpeed.get());
+                        }
+                        upTick++;
+                    }
                 }
             }
         }

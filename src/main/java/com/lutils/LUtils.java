@@ -1,8 +1,6 @@
 package com.lutils;
 
-import com.lutils.modules.AutoDrool;
-import com.lutils.modules.Eloadra;
-import com.lutils.modules.Explore;
+import com.lutils.modules.*;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -24,6 +22,9 @@ public class LUtils extends MeteorAddon {
         Modules.get().add(new Eloadra());
         Modules.get().add(new Explore());
         Modules.get().add(new AutoDrool());
+        Modules.get().add(new SignAura());
+        Modules.get().add(new AutoMapCopy());
+        Modules.get().add(new BlockOutline());
     }
 
     @Override
