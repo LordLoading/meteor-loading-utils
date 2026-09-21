@@ -24,6 +24,7 @@ public class LUtils extends MeteorAddon {
         Modules.get().add(new AutoDrool());
         Modules.get().add(new SignAura());
         Modules.get().add(new AutoMapCopy());
+        Modules.get().add(new BlockOutline());
     }
 
     @Override
