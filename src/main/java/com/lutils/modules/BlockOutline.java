@@ -73,7 +73,7 @@ public class BlockOutline extends Module {
     private final Setting<SettingColor> breakProgressColor = sgGeneral.add(new ColorSetting.Builder()
         .name("break progress color")
         .description("The color of the outline when the block is being broken.")
-        .defaultValue(new SettingColor(255, 100, 100, 0))
+        .defaultValue(new SettingColor(255, 100, 100, 255))
         .visible(() -> breakProgress.get())
         .build()
     );
