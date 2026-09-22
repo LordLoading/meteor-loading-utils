@@ -97,9 +97,13 @@ public class BlockOutline extends Module {
         BlockPos bp = result.getBlockPos();
         VoxelShape shape = mc.world.getBlockState(bp).getOutlineShape(mc.world, bp);
 
-        Color c = new Color(ColorHelper.lerp(((ClientPlayerInteractionManagerAccessor) mc.interactionManager).getBreakingProgress(), color.get().getPacked(), breakProgressColor.get().getPacked()));
+        Color c = new Color(ColorHelper.Argb.lerp(
+            ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).getBreakingProgress(),
+            rgbaToArgb(breakProgressColor.get().getPacked()),
+            rgbaToArgb(color.get().getPacked())));
 
-        blockOutlineShader.beginRender();
+
+                blockOutlineShader.beginRender();
 
         blockOutlineShader.meshBegin();
 
@@ -112,5 +116,11 @@ public class BlockOutline extends Module {
         }
 
         blockOutlineShader.endRender(event.matrices);
+    }
+
+    private int rgbaToArgb(int rgba) {
+        int argb = rgba>>8;
+        argb |= (rgba & 0x0FF)<<24;
+        return argb;
     }
 }
