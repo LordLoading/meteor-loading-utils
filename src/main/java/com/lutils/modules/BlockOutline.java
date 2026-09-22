@@ -5,19 +5,19 @@ package com.lutils.modules;
 import com.lutils.LUtils;
 import com.lutils.utils.render.postprocess.BlockOutlineShader;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
+import meteordevelopment.meteorclient.mixin.ClientPlayerInteractionManagerAccessor;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.block.Block;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.shape.VoxelShape;
-
-import java.util.List;
 
 public class BlockOutline extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
@@ -64,10 +64,24 @@ public class BlockOutline extends Module {
         .build()
     );
 
+    private final Setting<Boolean> breakProgress = sgGeneral.add(new BoolSetting.Builder()
+        .name("break progress")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<SettingColor> breakProgressColor = sgGeneral.add(new ColorSetting.Builder()
+        .name("break progress color")
+        .description("The color of the outline when the block is being broken.")
+        .defaultValue(new SettingColor(255, 100, 100, 0))
+        .visible(() -> breakProgress.get())
+        .build()
+    );
+
     private final BlockOutlineShader blockOutlineShader;
 
     public BlockOutline() {
-        super(LUtils.CATEGORY, "Shader Block Outline", "Fancier block selection.");
+        super(LUtils.CATEGORY, "Block Outline", "Fancier block selection.");
         blockOutlineShader = new BlockOutlineShader(
             () -> outlineWidth.get(),
             () -> fillOpacity.get() / 255.0f,
@@ -83,6 +97,8 @@ public class BlockOutline extends Module {
         BlockPos bp = result.getBlockPos();
         VoxelShape shape = mc.world.getBlockState(bp).getOutlineShape(mc.world, bp);
 
+        Color c = new Color(ColorHelper.lerp(((ClientPlayerInteractionManagerAccessor) mc.interactionManager).getBreakingProgress(), color.get().getPacked(), breakProgressColor.get().getPacked()));
+
         blockOutlineShader.beginRender();
 
         blockOutlineShader.meshBegin();
@@ -91,7 +107,7 @@ public class BlockOutline extends Module {
             blockOutlineShader.renderBox(
                 b.minX + bp.getX(), b.minY + bp.getY(), b.minZ + bp.getZ(),
                 b.maxX + bp.getX(),  b.maxY + bp.getY(), b.maxZ + bp.getZ(),
-                color.get()
+                breakProgress.get() ? c : color.get()
             );
         }
 
