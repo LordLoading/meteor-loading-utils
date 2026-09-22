@@ -25,15 +25,6 @@ public class Eloadra extends Module {
         .build()
     );
 
-    private final Setting<Double> controlSpeed = sgHorizontal.add(new DoubleSetting.Builder()
-        .name("control speed")
-        .description("look at name")
-        .defaultValue(5d)
-        .sliderRange(0d, 4d)
-        .visible(() -> hMode.get() == hModes.CONTROL)
-        .build()
-    );
-
     private final Setting<Double> packetSpeed = sgHorizontal.add(new DoubleSetting.Builder()
         .name("packet speed")
         .description("look at name")
@@ -43,7 +34,7 @@ public class Eloadra extends Module {
         .build()
     );
 
-    private final Setting<Double> accel = sgHorizontal.add(new DoubleSetting.Builder()
+    private final Setting<Double> accel = sgUp.add(new DoubleSetting.Builder()
         .name("acceleration")
         .description("look at name")
         .defaultValue(3d)
@@ -60,7 +51,7 @@ public class Eloadra extends Module {
 
     private final Setting<Boolean> lowHover = sgHorizontal.add(new BoolSetting.Builder()
         .name("Auto Low Hover")
-        .description("Automatically hovers low to the ground on activation for tunnel travel.")
+        .description("Automatically hovers low to the ground on activation. Good for tunnel travel.")
         .defaultValue(false)
         .visible(() -> hMode.get() == hModes.PACKET)
         .build()
@@ -139,8 +130,7 @@ public class Eloadra extends Module {
     );
 
     private enum hModes {
-        PACKET,
-        CONTROL
+        PACKET
     }
 
     private enum uModes {
@@ -244,28 +234,6 @@ public class Eloadra extends Module {
     private void onMove(PlayerMoveEvent event) {
         if(!mc.options.jumpKey.isPressed() || (mc.options.sneakKey.isPressed() && mc.options.jumpKey.isPressed())) {
             upTick = 0;
-
-            switch (hMode.get()) {
-                case CONTROL -> {
-                    if(!mc.player.isGliding()) return;
-
-                    if (getInputDirection().length() == 0) {
-                        currentSpeed = 0;
-                        if (mc.options.sneakKey.isPressed()) {
-                            mc.player.setVelocity(0, -0.5, 0);
-                            ((IVec3d) event.movement).meteor$set(0,-0.5,0);
-                        } else {
-                            mc.player.setVelocity(Vec3d.ZERO);
-                            ((IVec3d) event.movement).meteor$set(0, 0, 0);
-                        }
-                        return;
-                    }
-                    currentSpeed += accel.get();
-                    if (currentSpeed > controlSpeed.get()) currentSpeed = controlSpeed.get();
-                    Vec3d mVec = getInputDirection().multiply(currentSpeed).add(0, mc.options.sneakKey.isPressed() ? -1 : 0, 0);
-                    ((IVec3d) event.movement).meteor$set(mVec.x, mVec.y, mVec.z);
-                }
-            }
         } else {
             switch (uMode.get()) {
                 case CONTROL -> {
@@ -349,39 +317,33 @@ public class Eloadra extends Module {
     @EventHandler
     public void onPacketReceive(PacketEvent.Receive event) {
         if (!mc.options.jumpKey.isPressed()) {
-            switch (hMode.get()) {
-                case PACKET -> {
-                    if (event.packet instanceof EntityTrackerUpdateS2CPacket && ((EntityTrackerUpdateS2CPacket) event.packet).id() == mc.player.getId()) {
-                        event.cancel();
-                    }
-                }
+            if (event.packet instanceof EntityTrackerUpdateS2CPacket && ((EntityTrackerUpdateS2CPacket) event.packet).id() == mc.player.getId()) {
+                event.cancel();
             }
         }
     }
 
-    private Vec3d calcGlideUpVel(Vec3d oldVelocity, float pitch, Vec3d inputDir) {
-        Vec3d lookVec = inputDir.add(0, Math.cos(Math.toRadians(pitch)),0).normalize();
-        System.out.println(lookVec);
-        System.out.println(getInputDirection());
-        System.out.println("\n");
-        float piitch = pitch * (float) (Math.PI / 180.0);
-        double d = lookVec.horizontalLength();
-        double e = oldVelocity.horizontalLength();
-        double g = mc.player.getFinalGravity();
-        double h = MathHelper.square(Math.cos(piitch));
-        oldVelocity = oldVelocity.add(0.0, g * (-1.0 + h * 0.75), 0.0);
-        if (oldVelocity.y < 0.0 && d > 0.0) {
-            double i = oldVelocity.y * -0.1 * h;
-            oldVelocity = oldVelocity.add(lookVec.x * i / d, i, lookVec.z * i / d);
+    private Vec3d calcGlideUpVel(Vec3d oldVelocity, float pitchDeg, Vec3d inputDir) {
+        Vec3d lookVec = inputDir.add(0, Math.cos(Math.toRadians(pitchDeg)),0).normalize();
+        float pitchRad = pitchDeg * (float) (Math.PI / 180.0);
+        double hLook = lookVec.horizontalLength();
+        double hVel = oldVelocity.horizontalLength();
+        double gravity = mc.player.getFinalGravity();
+        double magic = MathHelper.square(Math.cos(pitchRad));
+
+        oldVelocity = oldVelocity.add(0.0, gravity * (-1.0 + magic * 0.75), 0.0);
+        if (oldVelocity.y < 0.0 && hLook > 0.0) {
+            double i = oldVelocity.y * -0.1 * magic;
+            oldVelocity = oldVelocity.add(lookVec.x * i / hLook, i, lookVec.z * i / hLook);
         }
 
-        if (piitch < 0.0F && d > 0.0) {
-            double i = e * -MathHelper.sin(piitch) * 0.04;
-            oldVelocity = oldVelocity.add(-lookVec.x * i / d, i * 3.2, -lookVec.z * i / d);
+        if (pitchRad < 0.0F && hLook > 0.0) {
+            double i = hVel * -MathHelper.sin(pitchRad) * 0.04;
+            oldVelocity = oldVelocity.add(-lookVec.x * i / hLook, i * 3.2, -lookVec.z * i / hLook);
         }
 
-        if (d > 0.0) {
-            oldVelocity = oldVelocity.add((lookVec.x / d * e - oldVelocity.x) * 0.1, 0.0, (lookVec.z / d * e - oldVelocity.z) * 0.1);
+        if (hLook > 0.0) {
+            oldVelocity = oldVelocity.add((lookVec.x / hLook * hVel - oldVelocity.x) * 0.1, 0.0, (lookVec.z / hLook * hVel - oldVelocity.z) * 0.1);
         }
 
         return oldVelocity.multiply(0.99F, 0.98F, 0.99F);
