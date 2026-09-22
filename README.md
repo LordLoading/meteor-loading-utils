@@ -1,8 +1,14 @@
 # LUtils 
 ![icon.png](src/main/resources/assets/template/icon.png)
 
-Just some modules that are supposed to solve my problems specifically.
+A few, mostly utility modules for oldfrog.org, specific to my needs.
 
-Feel free to suggest features anyways.
+This includes (for now):
+- AutoDrool: a meteor auto tool skid that can access the inventory, not just the hotbar
+- AutoMapCopy: a module for automatically creating a specified amount of every map in your inv
+- BlockOutline: just a fancy selection highlight
+- Eloadra: decently customizable ely fly bringing features that very few eflys have
+- Explore: spiral
+- SignAura: destroys signs around you if they contain a specified string
 
-Dont look at the code too closely, you will lose braincells, but at least everything works well (i hope)
+for bug reports or feature requests please open an issue or message me on discord (@lordloading)
