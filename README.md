@@ -1,5 +1,5 @@
 # LUtils 
-![icon.png](src/main/resources/assets/template/icon.png)
+![icon.png](src/main/resources/assets/img/icon.png)
 
 A few, mostly utility modules for oldfrog.org, specific to my needs.
 

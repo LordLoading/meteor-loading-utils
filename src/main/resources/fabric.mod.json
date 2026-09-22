@@ -3,15 +3,15 @@
   "id": "lutils",
   "version": "${version}",
   "name": "LUtils",
-  "description": "Some stuff to improve QOL, mostly on oldfag.",
+  "description": "Some stuff to improve QOL, mostly on oldfrog.org.",
   "authors": [
-    "Loading...",
+    "Lord_Loading",
     "zOnlyKroks"
   ],
   "contact": {
-    "sources": "https://github.com/MeteorDevelopment/meteor-addon-template"
+    "sources": "https://github.com/LordLoading/meteor-loading-utils"
   },
-  "icon": "assets/template/icon.png",
+  "icon": "assets/img/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
