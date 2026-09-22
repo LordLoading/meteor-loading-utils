@@ -95,6 +95,6 @@ public class BlockOutline extends Module {
             );
         }
 
-        blockOutlineShader.endRender(() -> blockOutlineShader.meshRender(event.matrices));
+        blockOutlineShader.endRender(event.matrices);
     }
 }

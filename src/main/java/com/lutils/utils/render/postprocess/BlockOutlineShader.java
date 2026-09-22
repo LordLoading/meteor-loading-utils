@@ -2,9 +2,10 @@ package com.lutils.utils.render.postprocess;
 
 import meteordevelopment.meteorclient.renderer.GL;
 import meteordevelopment.meteorclient.renderer.Mesh;
-import meteordevelopment.meteorclient.utils.render.MeshVertexConsumerProvider;
 import meteordevelopment.meteorclient.renderer.ShaderMesh;
 import meteordevelopment.meteorclient.renderer.Shaders;
+import meteordevelopment.meteorclient.renderer.DrawMode;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
@@ -22,7 +23,6 @@ import static meteordevelopment.meteorclient.MeteorClient.mc;
 
 public class BlockOutlineShader {
     public SimpleFramebuffer framebuffer;
-    public final MeshVertexConsumerProvider vertexConsumerProvider;
     private final Mesh mesh;
     private int programId;
     private final Supplier<Integer> widthSupplier;
@@ -58,17 +58,17 @@ public class BlockOutlineShader {
 
         mesh = new ShaderMesh(
             Shaders.POS_COLOR,
-            meteordevelopment.meteorclient.renderer.DrawMode.Triangles,
+            DrawMode.Triangles,
             Mesh.Attrib.Vec3,
             Mesh.Attrib.Color
         );
-        vertexConsumerProvider = new MeshVertexConsumerProvider(mesh);
+
         loadShaders();
         cacheUniforms();
 
         int w = mc.getWindow().getFramebufferWidth();
         int h = mc.getWindow().getFramebufferHeight();
-        framebuffer = new SimpleFramebuffer(w, h, true);
+        framebuffer = new SimpleFramebuffer(w, h, true, MinecraftClient.IS_SYSTEM_MAC);
 
         initQuad();
     }
@@ -176,17 +176,17 @@ public class BlockOutlineShader {
     public void beginRender() {
         if (!enabledSupplier.get()) return;
         resizeIfNeeded();
-        framebuffer.clear();
+        framebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
         mc.getFramebuffer().beginWrite(false);
     }
 
-    public void endRender(Runnable drawMesh) {
+    public void endRender(MatrixStack matrices) {
         if (!enabledSupplier.get()) return;
 
         GL.saveState();
         GL.disableDepth();
         framebuffer.beginWrite(false);
-        drawMesh.run();
+        mesh.render(matrices);
         mc.getFramebuffer().beginWrite(false);
         GL.restoreState();
 
@@ -213,17 +213,6 @@ public class BlockOutlineShader {
         GL.restoreState();
     }
 
-    private void resizeIfNeeded() {
-        int width = mc.getWindow().getFramebufferWidth();
-        int height = mc.getWindow().getFramebufferHeight();
-
-        if (framebuffer.textureWidth == width && framebuffer.textureHeight == height) {
-            return;
-        }
-
-        framebuffer.resize(width, height);
-    }
-
     public void meshBegin() {
         mesh.begin();
     }
@@ -233,6 +222,7 @@ public class BlockOutlineShader {
     }
 
     public void renderBox(double x1, double y1, double z1, double x2, double y2, double z2, meteordevelopment.meteorclient.utils.render.color.Color color) {
+
         int i0 = mesh.vec3(x1, y1, z2).color(color).next();
         int i1 = mesh.vec3(x2, y1, z2).color(color).next();
         int i2 = mesh.vec3(x2, y2, z2).color(color).next();
@@ -268,5 +258,16 @@ public class BlockOutlineShader {
         i2 = mesh.vec3(x1, y2, z2).color(color).next();
         i3 = mesh.vec3(x1, y2, z1).color(color).next();
         mesh.quad(i0, i1, i2, i3);
+    }
+
+    private void resizeIfNeeded() {
+        int width = mc.getWindow().getFramebufferWidth();
+        int height = mc.getWindow().getFramebufferHeight();
+
+        if (framebuffer.textureWidth == width && framebuffer.textureHeight == height) {
+            return;
+        }
+
+        framebuffer.resize(width, height, MinecraftClient.IS_SYSTEM_MAC);
     }
 }

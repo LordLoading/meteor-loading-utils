@@ -332,12 +332,12 @@ public class Eloadra extends Module {
                     if (event.movement.y < 0 || upTick > 0) {
                         mc.player.getAbilities().allowFlying = false;
                         mc.player.getAbilities().flying = false;
-                        if (!mc.player.isGliding()) {
-                            mc.player.startGliding();
+                        if (!mc.player.isFallFlying()) {
+                            mc.player.startFallFlying();
                             mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
                         }
                         if(upTick > upTimer.get()) {
-                            ((IVec3d) event.movement).meteor$set(getInputDirection().x * uControlSpeed.get(), uControlSpeed.get(), getInputDirection().z * uControlSpeed.get());
+                            ((IVec3d) event.movement).set(getInputDirection().x * uControlSpeed.get(), uControlSpeed.get(), getInputDirection().z * uControlSpeed.get());
                         }
                         upTick++;
                     }
