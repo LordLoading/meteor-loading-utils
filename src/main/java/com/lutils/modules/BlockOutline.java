@@ -97,7 +97,10 @@ public class BlockOutline extends Module {
         BlockPos bp = result.getBlockPos();
         VoxelShape shape = mc.world.getBlockState(bp).getOutlineShape(mc.world, bp);
 
-        Color c = new Color(ColorHelper.lerp(((ClientPlayerInteractionManagerAccessor) mc.interactionManager).getBreakingProgress(), color.get().getPacked(), breakProgressColor.get().getPacked()));
+        Color c = new Color(ColorHelper.lerp(
+                ((ClientPlayerInteractionManagerAccessor) mc.interactionManager).meteor$getBreakingProgress(),
+                color.get().getPacked(),
+                breakProgressColor.get().getPacked()));
 
         blockOutlineShader.beginRender();
 
