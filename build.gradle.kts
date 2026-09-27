@@ -21,6 +21,11 @@ repositories {
         name = "masa"
         url = uri("https://masa.dy.fi/maven/sakura-ryoko/")
     }
+
+    maven {
+        name = "fallenbreath-maven"
+        url = uri("https://maven.fallenbreath.me/releases")
+    }
 }
 
 dependencies {
