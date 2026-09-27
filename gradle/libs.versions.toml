@@ -13,6 +13,8 @@ loom = "1.14-SNAPSHOT"
 meteor = "1.21.4-SNAPSHOT"
 
 # Mods
+litematica = "0.21.7"
+malilib = "0.23.5"
 
 [libraries]
 # Fabric base
@@ -22,6 +24,10 @@ fabric-loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric-l
 
 # Meteor client
 meteor-client = { module = "meteordevelopment:meteor-client", version.ref = "meteor" }
+
+# Mods
+litematica = { module = "fi.dy.masa.litematica:litematica-fabric-1.21.4", version.ref = "litematica" }
+malilib = { module = "fi.dy.masa.malilib:malilib-fabric-1.21.4", version.ref = "malilib" }
 
 # Mods
 

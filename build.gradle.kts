@@ -17,6 +17,10 @@ repositories {
         name = "meteor-maven-snapshots"
         url = uri("https://maven.meteordev.org/snapshots")
     }
+    maven {
+        name = "masa"
+        url = uri("https://masa.dy.fi/maven/sakura-ryoko/")
+    }
 }
 
 dependencies {
@@ -27,6 +31,10 @@ dependencies {
 
     // Meteor
     modImplementation(libs.meteor.client)
+
+    // Mods
+    modImplementation(libs.litematica)
+    modImplementation(libs.malilib)
 }
 
 tasks {
