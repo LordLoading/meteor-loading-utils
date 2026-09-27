@@ -33,5 +33,9 @@
     "java": ">=21",
     "minecraft": ["${mc_version}"],
     "meteor-client": "*"
+  },
+  "recommends": {
+    "litematica": "*",
+    "malilib": "*"
   }
 }

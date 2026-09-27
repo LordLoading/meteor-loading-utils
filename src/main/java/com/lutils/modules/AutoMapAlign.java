@@ -52,17 +52,20 @@ public class AutoMapAlign extends Module {
 
     public void onActivate() {
         SchematicPlacement selected = DataManager.getSchematicPlacementManager().getSelectedSchematicPlacement();
+        if (selected == null) {
+            toggle();
+            return;
+        }
+
         BlockPos pos = mc.player.getBlockPos();
 
         pos = pos.add(-64, 0, -64);
-        // this just rounds x and z down to the nearest multiple of 128
-        pos = new BlockPos(pos.getX()&0xFFFFFF80, pos.getY(),pos.getZ()&0xFFFFFF80);
+        pos = new BlockPos(pos.getX() & 0xFFFFFF80, pos.getY(), pos.getZ() & 0xFFFFFF80);
         pos = pos.add(64, 0, 64);
         pos = pos.add(xOffset.get(), 0, zOffset.get());
         if (useY.get()) pos = new BlockPos(pos.getX(), y.get(), pos.getZ());
 
         selected.setOrigin(pos, s -> {});
-
         toggle();
     }
 }
