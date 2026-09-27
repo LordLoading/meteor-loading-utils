@@ -1,21 +1,17 @@
 package com.lutils.utils;
 
+import net.fabricmc.loader.api.FabricLoader;
+
 public class OtherModsUtils {
     public static boolean litematicaLoaded() {
-        try {
-            Class.forName("fi.dy.masa.litematica");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return isModLoaded("litematica");
     }
 
     public static boolean malilibLoaded() {
-        try {
-            Class.forName("fi.dy.masa.malilib");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return isModLoaded("malilib");
+    }
+
+    private static boolean isModLoaded(String modId) {
+        return FabricLoader.getInstance().getModContainer(modId).isPresent();
     }
 }
