@@ -1,6 +1,7 @@
 package com.lutils;
 
 import com.lutils.modules.*;
+import com.lutils.utils.OtherModsUtils;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
@@ -25,7 +26,9 @@ public class LUtils extends MeteorAddon {
         Modules.get().add(new SignAura());
         Modules.get().add(new AutoMapCopy());
         Modules.get().add(new BlockOutline());
-        Modules.get().add(new AutoMapAlign());
+        if (OtherModsUtils.litematicaLoaded() && OtherModsUtils.malilibLoaded()) {
+            Modules.get().add(new AutoMapAlign());
+        };
     }
 
     @Override
