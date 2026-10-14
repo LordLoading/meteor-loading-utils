@@ -57,10 +57,10 @@ public class Eloadra extends Module {
         .build()
     );
 
-    public final Setting<Boolean> wormMode = sgHorizontal.add(new BoolSetting.Builder()
-        .name("Worm Mode")
-        .description("You become a worm but your rotations get more accurate.")
-        .defaultValue(false)
+    public final Setting<poseModes> poseMode = sgHorizontal.add(new EnumSetting.Builder<poseModes>()
+        .name("Pose-Mode")
+        .description("Which pose you are in while flying. (mostly for rotation stuff)")
+        .defaultValue(poseModes.WALKIN)
         .visible(() -> hMode.get() == hModes.PACKET)
         .build()
     );
@@ -147,6 +147,13 @@ public class Eloadra extends Module {
         CONTROL_STRAIGHT
     }
 
+    public enum poseModes {
+        WALKIN,
+        EEPY,
+        WORM,
+        FOOT_VISION
+    }
+
     private int afkTick = 0;
     private double currentSpeed = 0;
     private double upTick = 0;
@@ -175,8 +182,11 @@ public class Eloadra extends Module {
         mc.player.getAbilities().allowFlying = true;
         mc.player.getAbilities().setFlySpeed((float) (double) packetSpeed.get());
         mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
-        if(wormMode.get()) {
-            mc.player.setPose(EntityPose.SWIMMING);
+
+        switch (poseMode.get()) {
+            case EEPY -> mc.player.setPose(EntityPose.SLEEPING);
+            case WORM -> mc.player.setPose(EntityPose.SWIMMING);
+
         }
     }
 
@@ -232,8 +242,11 @@ public class Eloadra extends Module {
             switch (hMode.get()) {
                 case PACKET -> {
                     mc.player.stopGliding();
-                    if(wormMode.get()) {
-                        mc.player.setPose(EntityPose.SWIMMING);
+
+                    switch (poseMode.get()) {
+                        case EEPY, FOOT_VISION -> mc.player.setPose(EntityPose.SLEEPING);
+                        case WORM -> mc.player.setPose(EntityPose.SWIMMING);
+
                     }
                 }
             }

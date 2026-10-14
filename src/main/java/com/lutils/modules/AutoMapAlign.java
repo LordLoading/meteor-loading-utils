@@ -60,6 +60,7 @@ public class AutoMapAlign extends Module {
         BlockPos pos = mc.player.getBlockPos();
 
         pos = pos.add(-64, 0, -64);
+        // the pos & 0xFFFFFF80 thing is basically just rounding down to the nearest multiple of 128
         pos = new BlockPos(pos.getX() & 0xFFFFFF80, pos.getY(), pos.getZ() & 0xFFFFFF80);
         pos = pos.add(64, 0, 64);
         pos = pos.add(xOffset.get(), 0, zOffset.get());
