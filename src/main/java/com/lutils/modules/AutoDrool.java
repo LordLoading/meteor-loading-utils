@@ -1,4 +1,23 @@
-// skidded from meteor, modified by zOnlyKroks
+/*
+ * This file is part of LUtils.
+ *
+ * LUtils is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * LUtils is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with LUtils. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This file is based on Meteor Client's AutoTool module (GPL-3.0)
+ * Original: meteordevelopment/meteor-client/systems/modules/world/AutoTool.java
+ * Modified: Added inventory tool swapping.
+ */
 
 package com.lutils.modules;
 

@@ -57,6 +57,14 @@ public class Eloadra extends Module {
         .build()
     );
 
+    public final Setting<Boolean> wormMode = sgHorizontal.add(new BoolSetting.Builder()
+        .name("Worm Mode")
+        .description("You become a worm but your rotations get more accurate.")
+        .defaultValue(false)
+        .visible(() -> hMode.get() == hModes.PACKET)
+        .build()
+    );
+
     private final Setting<uModes> uMode = sgUp.add(new EnumSetting.Builder<uModes>()
         .name("Up Mode")
         .description("mode for flying upwards")
@@ -167,6 +175,9 @@ public class Eloadra extends Module {
         mc.player.getAbilities().allowFlying = true;
         mc.player.getAbilities().setFlySpeed((float) (double) packetSpeed.get());
         mc.player.networkHandler.sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.START_FALL_FLYING));
+        if(wormMode.get()) {
+            mc.player.setPose(EntityPose.SWIMMING);
+        }
     }
 
 
@@ -221,7 +232,9 @@ public class Eloadra extends Module {
             switch (hMode.get()) {
                 case PACKET -> {
                     mc.player.stopGliding();
-                    mc.player.setPose(EntityPose.STANDING);
+                    if(wormMode.get()) {
+                        mc.player.setPose(EntityPose.SWIMMING);
+                    }
                 }
             }
         } else {
