@@ -8,21 +8,15 @@ import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.renderer.*;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
-import meteordevelopment.meteorclient.utils.player.ChatUtils;
-import meteordevelopment.meteorclient.utils.render.MeshVertexConsumerProvider;
+import meteordevelopment.meteorclient.utils.render.MeshBuilderVertexConsumerProvider;
 import meteordevelopment.meteorclient.utils.render.SimpleBlockRenderer;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
-import meteordevelopment.meteorclient.utils.render.postprocess.PostProcessShaders;
 import meteordevelopment.orbit.EventHandler;
 
 import meteordevelopment.orbit.listeners.ConsumerListener;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -93,15 +87,15 @@ public class BlockOutline extends Module {
         .build()
     );
 
-    private final Mesh mesh;
-    private final MeshVertexConsumerProvider vertexConsumerProvider;
-    private final BlockOutlineShader shader = new BlockOutlineShader(this);
+    private final MeshBuilder mesh;
+    private final MeshBuilderVertexConsumerProvider vertexConsumerProvider;
+    private final BlockOutlineShader shader = new BlockOutlineShader();
 
     public BlockOutline() {
         super(LUtils.CATEGORY, "Block Outline", "Fancier block selection.");
 
-        mesh = new ShaderMesh(Shaders.POS_COLOR, DrawMode.Triangles, Mesh.Attrib.Vec3, Mesh.Attrib.Color);
-        vertexConsumerProvider = new MeshVertexConsumerProvider(mesh);
+        mesh = new MeshBuilder(MeteorRenderPipelines.WORLD_COLORED);
+        vertexConsumerProvider = new MeshBuilderVertexConsumerProvider(mesh);
 
         MeteorClient.EVENT_BUS.subscribe(new ConsumerListener<>(ResolutionChangedEvent.class, event -> {
             if (shader != null) {
@@ -121,7 +115,7 @@ public class BlockOutline extends Module {
         if (selectedPos == null) return;
 
         mesh.begin();
-
+        
         if (!breakProgress.get()) vertexConsumerProvider.setColor(color.get());
         else {
             assert mc.interactionManager != null;
@@ -134,21 +128,29 @@ public class BlockOutline extends Module {
         }
 
         BlockState state = mc.world.getBlockState(selectedPos);
-
-        SimpleBlockRenderer.render(selectedPos, state, vertexConsumerProvider);
-
         BlockEntity blockEntity = mc.world.getBlockEntity(selectedPos);
-        if (blockEntity != null) {
-            BlockEntityRenderer<BlockEntity> renderer = mc.getBlockEntityRenderDispatcher().get(blockEntity);
-            if (renderer != null && blockEntity.hasWorld() && blockEntity.getType().supports(state)) {
-                renderer.render(blockEntity, event.tickDelta, new MatrixStack(), vertexConsumerProvider,
-                    LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV);
 
-            }
+        if (blockEntity != null) {
+            SimpleBlockRenderer.renderWithBlockEntity(blockEntity, event.tickDelta, vertexConsumerProvider);
+        }
+        else {
+            vertexConsumerProvider.setOffset(selectedPos.getX(), selectedPos.getY(), selectedPos.getZ());
+            SimpleBlockRenderer.render(selectedPos, state, vertexConsumerProvider);
+            vertexConsumerProvider.setOffset(0, 0, 0);
         }
 
-        vertexConsumerProvider.setOffset(selectedPos.getX(), selectedPos.getY(), selectedPos.getZ());
+        int indexCount = mesh.getIndicesCount();
 
-        shader.endRender(() -> mesh.render(event.matrices));
+        MeshRenderer.begin()
+            .attachments(shader.framebuffer)
+            .clearColor(Color.CLEAR)
+            .pipeline(MeteorRenderPipelines.WORLD_COLORED)
+            .mesh(mesh, event.matrices)
+            .end();
+
+        if (indexCount > 0) shader.render();
+
+        if (mesh.isBuilding()) mesh.end();
+
     }
 }

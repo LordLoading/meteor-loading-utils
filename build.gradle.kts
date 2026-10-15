@@ -2,6 +2,18 @@ plugins {
     alias(libs.plugins.fabric.loom)
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("net.fabricmc:fabric-loader:0.18.2")
+    }
+}
+
 base {
     archivesName = properties["archives_base_name"] as String
     version = libs.versions.mod.version.get()

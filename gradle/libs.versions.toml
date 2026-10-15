@@ -13,8 +13,8 @@ loom = "1.17-SNAPSHOT"
 meteor = "1.21.11-SNAPSHOT"
 
 # Mods
-litematica = "0.26.16"
-malilib = "0.27.20"
+litematica = "0.26.15"
+malilib = "0.27.17"
 
 [libraries]
 # Fabric base

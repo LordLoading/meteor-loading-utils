@@ -1,22 +1,17 @@
 package com.lutils.utils.render.postprocess;
 
 import com.lutils.modules.BlockOutline;
+import meteordevelopment.meteorclient.renderer.MeshRenderer;
+import meteordevelopment.meteorclient.renderer.MeteorRenderPipelines;
 import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.utils.render.postprocess.OutlineUniforms;
 import meteordevelopment.meteorclient.utils.render.postprocess.PostProcessShader;
-import net.minecraft.entity.Entity;
 
 public class BlockOutlineShader extends PostProcessShader {
     private static BlockOutline blockOutline;
 
-    public BlockOutlineShader(BlockOutline blockOutline) {
-        init("outline");
-        BlockOutlineShader.blockOutline = blockOutline;
-    }
-
-    @Override
-    protected void preDraw() {
-        framebuffer.clear();
-        framebuffer.beginWrite(false);
+    public BlockOutlineShader() {
+        super(MeteorRenderPipelines.POST_OUTLINE);
     }
 
     @Override
@@ -26,15 +21,12 @@ public class BlockOutlineShader extends PostProcessShader {
     }
 
     @Override
-    public boolean shouldDraw(Entity entity) {
-        return true;
-    }
-
-    @Override
-    protected void setUniforms() {
-        shader.set("u_Width", blockOutline.outlineWidth.get());
-        shader.set("u_FillOpacity", blockOutline.fillOpacity.get() / 255.0);
-        shader.set("u_ShapeMode", blockOutline.shapeMode.get().ordinal());
-        shader.set("u_GlowMultiplier", blockOutline.glowMultiplier.get());
+    protected void setupPass(MeshRenderer renderer) {
+        renderer.uniform("OutlineData", OutlineUniforms.write(
+            blockOutline.outlineWidth.get(),
+            blockOutline.fillOpacity.get() / 255.0f,
+            blockOutline.shapeMode.get().ordinal(),
+            blockOutline.glowMultiplier.get().floatValue()
+        ));
     }
 }
