@@ -16,7 +16,9 @@
  *
  * This file is based on Meteor Client's Nuker module (GPL-3.0)
  * Original: meteordevelopment/meteor-client/systems/modules/world/Nuker.java
- * Modified: Converted to SignAura to nuker signs with certain user defined text on them.
+ * Modified: Converted to SignAura to break signs containing user-defined text on
+ *           the front or back, with optional empty-sign removal and
+ *           case-insensitive matching.
  */
 
 package com.lutils.modules;
@@ -70,6 +72,18 @@ public class SignAura extends Module {
         .name("mode")
         .description("The way the blocks are broken.")
         .defaultValue(meteordevelopment.meteorclient.systems.modules.world.Nuker.Mode.Flatten)
+        .build()
+    );
+
+    private final Setting<Boolean> removeEmpty = sgGeneral.add(new BoolSetting.Builder()
+        .name("remove empty")
+        .defaultValue(false)
+        .build()
+    );
+
+    private final Setting<Boolean> caseInsensitive = sgGeneral.add(new BoolSetting.Builder()
+        .name("ignore case")
+        .defaultValue(false)
         .build()
     );
 
@@ -383,18 +397,36 @@ public class SignAura extends Module {
 
             if (blockEntity instanceof SignBlockEntity sign) {
                 SignText frontText = sign.getFrontText();
+                SignText backText = sign.getBackText();
 
-                Text[] lines = frontText.getMessages(false);
+                Text[] linesFront = frontText.getMessages(false);
+                Text[] linesBack = backText.getMessages(false);
+                Text[] lines = new Text[linesFront.length + linesBack.length];
+                System.arraycopy(linesFront, 0, lines, 0, linesFront.length);
+                System.arraycopy(linesBack, 0, lines, linesFront.length, linesBack.length);
 
                 boolean foundInstance = false;
+                boolean empty = true;
 
-                for (Text line : lines) for (String str : strings.get()) if(line.getString().contains(str)) {
-                    if(str.isEmpty()) continue;
-                    foundInstance = true;
-                    break;
+                for (Text line : lines) for (String str : strings.get()) {
+                    if (!line.getString().isEmpty()) {
+                        empty = false;
+                        if (caseInsensitive.get()) {
+                            if (line.getString().toLowerCase().contains(str.toLowerCase())) {
+                                if(str.isEmpty()) continue;
+                                foundInstance = true;
+                                break;
+                            }
+                            if (line.getString().contains(str)) {
+                                if(str.isEmpty()) continue;
+                                foundInstance = true;
+                                break;
+                            }
+                        }
+                    }
                 }
 
-                if(!foundInstance) return;
+                if(!foundInstance && !(empty && removeEmpty.get())) return;
             } else {
                 return;
             }
