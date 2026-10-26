@@ -26,6 +26,7 @@ public class LUtils extends MeteorAddon {
         Modules.get().add(new SignAura());
         Modules.get().add(new AutoMapCopy());
         Modules.get().add(new BlockOutline());
+        Modules.get().add(new NamedItemHighlight());
         if (OtherModsUtils.litematicaLoaded() && OtherModsUtils.malilibLoaded()) {
             Modules.get().add(new AutoMapAlign());
         };
