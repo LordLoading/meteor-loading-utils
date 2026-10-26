@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(HandledScreen.class)
 public class HandledScreenMixin {
     @Inject(method = "drawSlot", at = @At("HEAD"))
-    private void onDrawSlot(DrawContext context, Slot slot, CallbackInfo ci) {
+    private void onDrawSlot(DrawContext context, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
         if (Modules.get().isActive(NamedItemHighlight.class)) {
             int color = Modules.get().get(NamedItemHighlight.class).color.get().getPacked();
             ItemStack stack = slot.getStack();
