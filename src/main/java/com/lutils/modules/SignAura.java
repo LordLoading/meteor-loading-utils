@@ -503,30 +503,6 @@ public class SignAura extends Module {
         event.cooldown = 0;
     }
 
-    public enum ListMode {
-        Whitelist,
-        Blacklist
-    }
-
-    public enum Mode {
-        All,
-        Flatten,
-        Smash
-    }
-
-    public enum SortMode {
-        None,
-        Closest,
-        Furthest,
-        TopDown
-    }
-
-    public enum Shape {
-        Cube,
-        UniformCube,
-        Sphere
-    }
-
     public static int chebyshevDist(int x1, int y1, int z1, int x2, int y2, int z2) {
         // Gets the largest X, Y or Z difference, chebyshev distance
         int dX = Math.abs(x2 - x1);

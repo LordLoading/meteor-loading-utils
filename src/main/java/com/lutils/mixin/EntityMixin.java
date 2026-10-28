@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(Entity.class)
 public class EntityMixin {
+
     @ModifyReturnValue(method = "isCrawling", at = @At("RETURN"))
     public boolean modifyIsCrawling(boolean original) {
         if((Entity) (Object) this == MinecraftClient.getInstance().player && Modules.get().isActive(Eloadra.class) && ((Eloadra) (Modules.get().get("Eloadra"))).poseMode.get() == Eloadra.poseModes.WORM) {
