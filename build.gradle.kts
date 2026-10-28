@@ -29,9 +29,16 @@ repositories {
         name = "meteor-maven-snapshots"
         url = uri("https://maven.meteordev.org/snapshots")
     }
-    maven {
-        name = "masa"
-        url = uri("https://masa.dy.fi/maven/sakura-ryoko/")
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "modrinth"
+                url = uri("https://api.modrinth.com/maven")
+            }
+        }
+        filter {
+            includeGroup("maven.modrinth")
+        }
     }
 
     maven {
@@ -45,6 +52,7 @@ dependencies {
     minecraft(libs.minecraft)
     mappings(variantOf(libs.yarn) { classifier("v2") })
     modImplementation(libs.fabric.loader)
+    modRuntimeOnly(libs.fabric.api)
 
     // Meteor
     modImplementation(libs.meteor.client)
