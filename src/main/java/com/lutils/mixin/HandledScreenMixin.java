@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(HandledScreen.class)
 public class HandledScreenMixin {
+
     @Inject(method = "drawSlot", at = @At("HEAD"))
     private void onDrawSlot(DrawContext context, Slot slot, CallbackInfo ci) {
         if (Modules.get().isActive(NamedItemHighlight.class)) {

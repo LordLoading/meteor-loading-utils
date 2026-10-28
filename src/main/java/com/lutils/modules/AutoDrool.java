@@ -79,7 +79,7 @@ public class AutoDrool extends Module {
         .name("tool slot")
         .defaultValue(1)
         .range(1, 9)
-        .visible(() -> useToolSlot.get())
+        .visible(useToolSlot::get)
         .build()
     );
 

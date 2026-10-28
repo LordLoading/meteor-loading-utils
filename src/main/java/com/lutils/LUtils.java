@@ -8,7 +8,6 @@ import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.gui.utils.SettingsWidgetFactory;
 import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
-import meteordevelopment.meteorclient.systems.hud.HudGroup;
 import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import org.slf4j.Logger;
@@ -16,7 +15,6 @@ import org.slf4j.Logger;
 public class LUtils extends MeteorAddon {
     public static final Logger LOG = LogUtils.getLogger();
     public static final Category CATEGORY = new Category("LUtils");
-    public static final HudGroup HUD_GROUP = new HudGroup("Example");
 
     @Override
     public void onInitialize() {
@@ -44,6 +42,7 @@ public class LUtils extends MeteorAddon {
         Modules.get().add(new BlockOutline());
         Modules.get().add(new NamedItemHighlight());
         Modules.get().add(new SlimeChunkHighlight());
+        Modules.get().add(new NetherPath());
         if (OtherModsUtils.litematicaLoaded() && OtherModsUtils.malilibLoaded()) {
             Modules.get().add(new AutoMapAlign());
         };

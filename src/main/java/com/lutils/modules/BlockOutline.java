@@ -89,7 +89,7 @@ public class BlockOutline extends Module {
         .name("break progress color")
         .description("The color of the outline when the block is being broken.")
         .defaultValue(new SettingColor(255, 100, 100, 255))
-        .visible(() -> breakProgress.get())
+        .visible(breakProgress::get)
         .build()
     );
 
@@ -104,9 +104,7 @@ public class BlockOutline extends Module {
         vertexConsumerProvider = new MeshVertexConsumerProvider(mesh);
 
         MeteorClient.EVENT_BUS.subscribe(new ConsumerListener<>(ResolutionChangedEvent.class, event -> {
-            if (shader != null) {
-                shader.onResized(mc.getWindow().getFramebufferWidth(), mc.getWindow().getFramebufferHeight());
-            }
+            shader.onResized(mc.getWindow().getFramebufferWidth(), mc.getWindow().getFramebufferHeight());
         }));
     }
 

@@ -14,6 +14,8 @@ import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
+import java.util.Objects;
+
 public class Eloadra extends Module {
     private final SettingGroup sgHorizontal = this.settings.createGroup("Horizontal");
     private final SettingGroup sgUp = this.settings.createGroup("Up");
@@ -239,15 +241,14 @@ public class Eloadra extends Module {
         if(!mc.options.jumpKey.isPressed()) {
             oldVelocity = Vec3d.ZERO;
             if(mc.player.isOnGround() && !onGround.get()) return;
-            switch (hMode.get()) {
-                case PACKET -> {
-                    mc.player.stopGliding();
 
-                    switch (poseMode.get()) {
-                        case EEPY, FOOT_VISION -> mc.player.setPose(EntityPose.SLEEPING);
-                        case WORM -> mc.player.setPose(EntityPose.SWIMMING);
+            if (hMode.get() == hModes.PACKET) {
+                mc.player.stopGliding();
 
-                    }
+                switch (poseMode.get()) {
+                    case EEPY, FOOT_VISION -> mc.player.setPose(EntityPose.SLEEPING);
+                    case WORM -> mc.player.setPose(EntityPose.SWIMMING);
+
                 }
             }
         } else {
@@ -265,7 +266,7 @@ public class Eloadra extends Module {
                 case CONTROL -> {
                     if (event.movement.y < 0 || upTick > 0) {
                         Vec3d movementDir = new Vec3d(0, 0, 1).rotateY(-(float) Math.toRadians(mc.player.getYaw()));
-                        Vec3d mVec = Vec3d.ZERO;
+                        Vec3d mVec;
                         mc.player.getAbilities().allowFlying = false;
                         mc.player.getAbilities().flying = false;
                         if (!mc.player.isGliding()) {
