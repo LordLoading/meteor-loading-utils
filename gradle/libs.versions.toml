@@ -4,10 +4,11 @@ mod-version = "0.6.0"
 # Fabric (https://fabricmc.net/develop)
 minecraft = "1.21.4"
 yarn-mappings = "1.21.4+build.7"
-fabric-loader = "0.18.2"
+fabric-loader = "0.20.1"
+fabric-api = "0.119.4+1.21.4"
 
 # Loom (https://github.com/FabricMC/fabric-loom)
-loom = "1.14-SNAPSHOT"
+loom = "1.19-SNAPSHOT"
 
 # Meteor (https://github.com/MeteorDevelopment/meteor-client/)
 meteor = "1.21.4-SNAPSHOT"
@@ -21,13 +22,14 @@ malilib = "0.23.5"
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
 yarn = { module = "net.fabricmc:yarn", version.ref = "yarn-mappings" }
 fabric-loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabric-loader" }
+fabric-api = { module = "net.fabricmc.fabric-api:fabric-api", version.ref = "fabric-api" }
 
 # Meteor client
 meteor-client = { module = "meteordevelopment:meteor-client", version.ref = "meteor" }
 
 # Mods
-litematica = { module = "fi.dy.masa.litematica:litematica-fabric-1.21.4", version.ref = "litematica" }
-malilib = { module = "fi.dy.masa.malilib:malilib-fabric-1.21.4", version.ref = "malilib" }
+litematica = { module = "maven.modrinth:litematica", version.ref = "litematica" }
+malilib = { module = "maven.modrinth:malilib", version.ref = "malilib" }
 
 # Mods
 
