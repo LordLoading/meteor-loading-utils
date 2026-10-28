@@ -252,7 +252,7 @@ public class NetherPath extends Module {
                 return;
         }
 
-        Vec3d pos = mc.player.getPos();
+        Vec3d pos = mc.player.getEntityPos();
 
         double toTarget = pos.distanceTo(target());
         if (toTarget < goalRadius.get()) {
@@ -494,7 +494,7 @@ public class NetherPath extends Module {
         if (mc.player == null || points.size() < 2) return;
 
         // Skip everything already passed
-        Vec3d pos = mc.player.getPos();
+        Vec3d pos = mc.player.getEntityPos();
         int first = Math.min(progress, points.size() - 1);
 
         Vec3d previous = pos;
@@ -511,6 +511,6 @@ public class NetherPath extends Module {
         List<Vec3d> points = path;
         if (waiting) return "waiting for chunks";
         if (points.isEmpty() || mc.player == null) return null;
-        return String.format("%.0fm", points.getLast().distanceTo(mc.player.getPos()));
+        return String.format("%.0fm", points.getLast().distanceTo(mc.player.getEntityPos()));
     }
 }
