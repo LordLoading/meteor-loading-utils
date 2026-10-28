@@ -50,8 +50,6 @@ public class LongSetting extends Setting<Long> {
 
     @Override
     public Long load(NbtCompound tag) {
-        set(tag.getLong("value"));
-
         return get();
     }
 
