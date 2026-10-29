@@ -232,7 +232,14 @@ public class NetherPath extends Module {
         .visible(() -> moveMode.get() == MoveMode.Fly)
         .build());
 
-    private final Setting<Integer> goalRadius = sgPathing.add(new IntSetting.Builder()
+    private final Setting<Boolean> moveInGui = sgPathing.add(new BoolSetting.Builder()
+        .name("move-in-gui")
+        .description("Keep steering you along the path while a screen (chat, inventory, ...) is open. When off, the module lets go of the controls until it is closed.")
+        .defaultValue(false)
+        .visible(() -> moveMode.get() == MoveMode.Fly)
+        .build());
+
+    private final Setting<Integer> goalRadius =sgPathing.add(new IntSetting.Builder()
         .name("goal-radius")
         .description("Counts as arrived when this close to the target.")
         .defaultValue(10)
@@ -367,8 +374,8 @@ public class NetherPath extends Module {
         if (toTarget > goalRadius.get() + 10) arrived = false;
         if (arrived) return;
 
-        // Hands off while a screen (chat, inventory, ...) is open
-        if (mc.currentScreen != null) {
+        // Hands off while a screen (chat, inventory, ...) is open, unless moving in screens is allowed
+        if (mc.currentScreen != null && !(moveInGui.get() && moveMode.get() == MoveMode.Fly)) {
             releaseKeys();
                 stuckTicks = 0;
             collisionTicks = 0;
