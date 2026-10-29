@@ -366,6 +366,7 @@ public class NetherPath extends Module {
             if (!arrived) {
                 arrived = true;
                 if (chatFeedback.get()) info("Arrived.");
+                toggle();
             }
             path = List.of();
             releaseKeys();
@@ -682,7 +683,7 @@ public class NetherPath extends Module {
         if (mc.player == null || points.size() < 2) return;
 
         // Skip everything already passed
-        Vec3d pos = mc.player.getPos();
+        Vec3d pos = mc.player.getLerpedPos(event.tickDelta);
         int first = Math.min(progress, points.size() - 1);
 
         Vec3d previous = pos;
