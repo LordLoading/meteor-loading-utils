@@ -11,8 +11,10 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.BlockState;
+import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.entity.Entity;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -22,6 +24,7 @@ import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -90,7 +93,7 @@ public class NetherPath extends Module {
     private final Setting<Double> margin = sgPathing.add(new DoubleSetting.Builder()
         .name("wall-margin")
         .description("How far into the air (in noise density) a cell has to be. Higher keeps more distance to walls.")
-        .defaultValue(0.05)
+        .defaultValue(0.5)
         .range(0, 1)
         .sliderRange(0, 0.5)
         .build());
@@ -98,7 +101,7 @@ public class NetherPath extends Module {
     private final Setting<Integer> nodeLimit = sgPathing.add(new IntSetting.Builder()
         .name("node-limit")
         .description("Maximum cells explored per search. If hit, the path leads to the closest explored point.")
-        .defaultValue(400000)
+        .defaultValue(20000)
         .range(10000, 5000000)
         .sliderRange(10000, 2000000)
         .build());
@@ -106,7 +109,7 @@ public class NetherPath extends Module {
     private final Setting<Double> weight = sgPathing.add(new DoubleSetting.Builder()
         .name("greediness")
         .description("1 = optimal A*. Higher is faster and heads straight for the target, but the path gets less optimal.")
-        .defaultValue(1.5)
+        .defaultValue(1.45)
         .range(1, 5)
         .sliderRange(1, 3)
         .build());
@@ -126,9 +129,25 @@ public class NetherPath extends Module {
     private final Setting<Integer> replanDistance = sgPathing.add(new IntSetting.Builder()
         .name("replan-distance")
         .description("Search again once you moved this far from where the last search started.")
-        .defaultValue(48)
+        .defaultValue(70)
         .range(8, 500)
         .sliderRange(8, 200)
+        .build());
+
+    private final Setting<Integer> replanInterval = sgPathing.add(new IntSetting.Builder()
+        .name("replan-interval")
+        .description("Search again this often, in seconds, from your current position. 0 = only when you moved the replan distance.")
+        .defaultValue(1)
+        .range(0, 120)
+        .sliderRange(0, 30)
+        .build());
+
+    private final Setting<Integer> replanAhead = sgPathing.add(new IntSetting.Builder()
+        .name("replan-ahead")
+        .description("Start a new search this many waypoints ahead of you and keep the part of the path before that, so the route right in front of you doesn't keep changing. 0 = search from your position.")
+        .defaultValue(12)
+        .range(0, 100)
+        .sliderRange(0, 20)
         .build());
 
     private final Setting<Boolean> avoidNetherWastes = sgBiomes.add(new BoolSetting.Builder()
@@ -146,13 +165,13 @@ public class NetherPath extends Module {
     private final Setting<Boolean> avoidCrimsonForest = sgBiomes.add(new BoolSetting.Builder()
         .name("avoid-crimson-forest")
         .description("Fly around Crimson Forests where possible.")
-        .defaultValue(false)
+        .defaultValue(true)
         .build());
 
     private final Setting<Boolean> avoidWarpedForest = sgBiomes.add(new BoolSetting.Builder()
         .name("avoid-warped-forest")
         .description("Fly around Warped Forests where possible.")
-        .defaultValue(false)
+        .defaultValue(true)
         .build());
 
     private final Setting<Boolean> avoidBasaltDeltas = sgBiomes.add(new BoolSetting.Builder()
@@ -172,7 +191,7 @@ public class NetherPath extends Module {
     private final Setting<Double> treeCost = sgPathing.add(new DoubleSetting.Builder()
         .name("tree-cost")
         .description("Extra cost per block of flying low through a crimson or warped forest whose chunks aren't loaded yet, where the trees can't be seen. Higher flies over them or around, 0 ignores them until they load.")
-        .defaultValue(3)
+        .defaultValue(2.85)
         .range(0, 20)
         .sliderRange(0, 10)
         .build());
@@ -186,7 +205,7 @@ public class NetherPath extends Module {
     private final Setting<Boolean> forestLane = sgPathing.add(new BoolSetting.Builder()
         .name("forest-lane")
         .description("Never plan below the treetops of an unloaded forest where there is room to fly above it. Safest, but can mean detours and climbing.")
-        .defaultValue(false)
+        .defaultValue(true)
         .build());
 
     private final Setting<Boolean> recheckPath = sgPathing.add(new BoolSetting.Builder()
@@ -198,7 +217,7 @@ public class NetherPath extends Module {
     private final Setting<Double> forestSpeed = sgPathing.add(new DoubleSetting.Builder()
         .name("forest-speed")
         .description("Fastest you fly, in blocks per tick, towards a forest whose chunks aren't loaded yet, so there is time to see the trees and react. 0 = no limit.")
-        .defaultValue(0.6)
+        .defaultValue(0.2)
         .range(0, 5)
         .sliderRange(0, 2)
         .build());
@@ -228,14 +247,14 @@ public class NetherPath extends Module {
     private final Setting<Boolean> rotate = sgPathing.add(new BoolSetting.Builder()
         .name("rotate")
         .description("Turn your head towards the next waypoint. When off you can look around freely and the module steers with WASD relative to where you look (gliding needs this on, it steers with the pitch).")
-        .defaultValue(true)
+        .defaultValue(false)
         .visible(() -> moveMode.get() == MoveMode.Fly)
         .build());
 
     private final Setting<Boolean> moveInGui = sgPathing.add(new BoolSetting.Builder()
         .name("move-in-gui")
         .description("Keep steering you along the path while a screen (chat, inventory, ...) is open. When off, the module lets go of the controls until it is closed.")
-        .defaultValue(false)
+        .defaultValue(true)
         .visible(() -> moveMode.get() == MoveMode.Fly)
         .build());
 
@@ -262,7 +281,7 @@ public class NetherPath extends Module {
     private final Setting<Integer> renderAhead = sgRender.add(new IntSetting.Builder()
         .name("render-ahead")
         .description("How many waypoints ahead to draw.")
-        .defaultValue(40)
+        .defaultValue(36)
         .range(2, 500)
         .sliderRange(2, 100)
         .build());
@@ -306,6 +325,7 @@ public class NetherPath extends Module {
     private int validateTicks;
     private int validateCooldown;
     private boolean pathInvalid;
+    private int replanTicks;
     private NetherTerrain terrain;
 
     public NetherPath() {
@@ -333,6 +353,7 @@ public class NetherPath extends Module {
         validateTicks = 0;
         validateCooldown = 0;
         pathInvalid = false;
+        replanTicks = 0;
         generation.incrementAndGet();
     }
 
@@ -346,6 +367,10 @@ public class NetherPath extends Module {
     private Vec3d target() {
         double div = overworldCoords.get() ? 8 : 1;
         return new Vec3d(Math.floor(targetX.get() / div) + 0.5, targetY.get(), Math.floor(targetZ.get() / div) + 0.5);
+    }
+
+    private void playArrivalSound() {
+        mc.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1.1f, 0.7f));
     }
 
     @EventHandler
@@ -366,6 +391,7 @@ public class NetherPath extends Module {
             if (!arrived) {
                 arrived = true;
                 if (chatFeedback.get()) info("Arrived.");
+                playArrivalSound();
                 toggle();
             }
             path = List.of();
@@ -392,13 +418,24 @@ public class NetherPath extends Module {
             validateAhead(points);
         }
 
+        boolean timedReplan = false;
+        if (replanInterval.get() > 0) {
+            if (++replanTicks >= replanInterval.get() * 20) {
+                replanTicks = 0;
+                timedReplan = true;
+            }
+        } else {
+            replanTicks = 0;
+        }
+
         if (!planning && cooldown-- <= 0) {
             boolean movedAway = plannedFrom == null || plannedFrom.distanceTo(pos) >= replanDistance.get();
             // A partial path ends somewhere in the middle of nowhere, so search again before reaching its end
             boolean nearEnd = !pathReached && !points.isEmpty() && points.getLast().distanceTo(pos) < REPLAN_BEFORE_END;
-            if (movedAway || nearEnd) {
+            if (movedAway || nearEnd || timedReplan) {
                 cooldown = 20;
-                plan(pos);
+                replanTicks = 0;
+                plan(pos, !pathInvalid);
             }
         }
 
@@ -611,13 +648,35 @@ public class NetherPath extends Module {
         return biomes;
     }
 
-    private void plan(Vec3d from) {
+    private boolean chunkLoadedAt(Vec3d p) {
+        return mc.world != null && mc.world.getChunkManager().getWorldChunk((int) Math.floor(p.x) >> 4, (int) Math.floor(p.z) >> 4) != null;
+    }
+
+    private void plan(Vec3d from, boolean fromAhead) {
         plannedFrom = from;
         planning = true;
 
         int gen = generation.get();
         long worldSeed = seed.get();
         Vec3d goal = target();
+
+        // Start a new search a few waypoints ahead and keep the path before that, so the route right in front of the player stays put
+        List<Vec3d> points = path;
+        int spliceIndex = -1;
+        Vec3d chosenStart = from;
+        int ahead = replanAhead.get();
+        if (fromAhead && ahead > 0 && !points.isEmpty() && progress < points.size()) {
+            int candidate = Math.min(progress + ahead, points.size() - 1);
+            Vec3d waypoint = points.get(candidate);
+            // With avoid-unloaded the search can't start outside the loaded chunks, so fall back to the player there
+            if (!avoidUnloaded.get() || chunkLoadedAt(waypoint)) {
+                spliceIndex = candidate;
+                chosenStart = waypoint;
+            }
+        }
+        int splice = spliceIndex;
+        Vec3d searchStart = chosenStart;
+
         NetherPathfinder.Params params = new NetherPathfinder.Params(
             margin.get().floatValue() + 0.1f * stuckLevel, clearance.get(), nodeLimit.get(), weight.get(), goalRadius.get(), useLoadedChunks.get(), predictionAccuracy < 0 || predictionAccuracy >= MIN_ACCURACY, List.copyOf(banned), groundClearance.get(), avoidUnloaded.get(),
             avoidedBiomes(), avoidBiomeCost.get(), treeCost.get(), learnTreeDensity.get(), forestLane.get());
@@ -629,11 +688,11 @@ public class NetherPath extends Module {
                 checkPrediction(from, worldSeed);
 
                 long start = System.currentTimeMillis();
-                NetherPathfinder.Result result = new NetherPathfinder(terrain).find(from, goal, params, () -> gen != generation.get());
+                NetherPathfinder.Result result = new NetherPathfinder(terrain).find(searchStart, goal, params, () -> gen != generation.get());
                 if (gen != generation.get()) return;
 
                 long ms = System.currentTimeMillis() - start;
-                mc.execute(() -> applyResult(result, goal, ms));
+                mc.execute(() -> applyResult(result, goal, ms, splice));
             } catch (Throwable t) {
                 LUtils.LOG.error("Nether path search failed", t);
                 mc.execute(() -> error("Search failed, see log."));
@@ -643,9 +702,10 @@ public class NetherPath extends Module {
         });
     }
 
-    private void applyResult(NetherPathfinder.Result result, Vec3d goal, long ms) {
+    private void applyResult(NetherPathfinder.Result result, Vec3d goal, long ms, int spliceIndex) {
         List<Vec3d> old = path;
         List<Vec3d> fresh = result.path();
+        List<Boolean> freshForest = result.inForest();
         boolean oldAhead = !old.isEmpty() && progress + 1 < old.size();
 
         // The old path runs into real blocks, so "keep it unless the new one is closer" doesn't apply
@@ -665,10 +725,26 @@ public class NetherPath extends Module {
             }
         }
 
+        // The search started from a waypoint ahead: keep the old path up to it so the route in front of the player doesn't jump
+        boolean spliced = spliceIndex > 0 && spliceIndex < old.size() && !fresh.isEmpty()
+            && progress <= spliceIndex && old.size() == pathForest.size() && fresh.size() == freshForest.size();
+        int newProgress = 1;
+        if (spliced) {
+            List<Vec3d> joined = new ArrayList<>(old.subList(0, spliceIndex + 1));
+            joined.addAll(fresh.subList(1, fresh.size()));
+            List<Boolean> joinedForest = new ArrayList<>(pathForest.subList(0, spliceIndex + 1));
+            joinedForest.addAll(freshForest.subList(1, freshForest.size()));
+            fresh = joined;
+            freshForest = joinedForest;
+            newProgress = progress;
+        }
+
         boolean quiet = !old.isEmpty() && !fresh.isEmpty() && result.reached() == pathReached
             && old.getLast().distanceTo(fresh.getLast()) < 16;
-        pathForest = result.inForest();
+        pathForest = freshForest;
         path = fresh;
+        progressPath = fresh;
+        progress = newProgress;
         pathReached = result.reached();
 
         if (!chatFeedback.get() || quiet) return;
