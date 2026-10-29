@@ -11,13 +11,20 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.World;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,6 +33,7 @@ public class NetherPath extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgPathing = settings.createGroup("Pathing");
     private final SettingGroup sgRender = settings.createGroup("Render");
+    private final SettingGroup sgBiomes = settings.createGroup("Biomes");
 
     private final Setting<Long> seed = sgGeneral.add(new LongSetting.Builder()
         .name("seed")
@@ -123,6 +131,78 @@ public class NetherPath extends Module {
         .sliderRange(8, 200)
         .build());
 
+    private final Setting<Boolean> avoidNetherWastes = sgBiomes.add(new BoolSetting.Builder()
+        .name("avoid-nether-wastes")
+        .description("Fly around the Nether Wastes where possible.")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Boolean> avoidSoulSandValley = sgBiomes.add(new BoolSetting.Builder()
+        .name("avoid-soul-sand-valley")
+        .description("Fly around Soul Sand Valleys where possible.")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Boolean> avoidCrimsonForest = sgBiomes.add(new BoolSetting.Builder()
+        .name("avoid-crimson-forest")
+        .description("Fly around Crimson Forests where possible.")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Boolean> avoidWarpedForest = sgBiomes.add(new BoolSetting.Builder()
+        .name("avoid-warped-forest")
+        .description("Fly around Warped Forests where possible.")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Boolean> avoidBasaltDeltas = sgBiomes.add(new BoolSetting.Builder()
+        .name("avoid-basalt-deltas")
+        .description("Fly around Basalt Deltas where possible.")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Double> avoidBiomeCost = sgBiomes.add(new DoubleSetting.Builder()
+        .name("avoid-cost")
+        .description("Extra cost per block of flying through an avoided biome. Higher detours more, but the path still goes through when there is no other way.")
+        .defaultValue(15)
+        .range(0, 200)
+        .sliderRange(0, 60)
+        .build());
+
+    private final Setting<Double> treeCost = sgPathing.add(new DoubleSetting.Builder()
+        .name("tree-cost")
+        .description("Extra cost per block of flying low through a crimson or warped forest whose chunks aren't loaded yet, where the trees can't be seen. Higher flies over them or around, 0 ignores them until they load.")
+        .defaultValue(3)
+        .range(0, 20)
+        .sliderRange(0, 10)
+        .build());
+
+    private final Setting<Boolean> learnTreeDensity = sgPathing.add(new BoolSetting.Builder()
+        .name("learn-tree-density")
+        .description("Measure how thick the trees are in the forests that are loaded around you and scale the tree cost for the unloaded ones by it.")
+        .defaultValue(true)
+        .build());
+
+    private final Setting<Boolean> forestLane = sgPathing.add(new BoolSetting.Builder()
+        .name("forest-lane")
+        .description("Never plan below the treetops of an unloaded forest where there is room to fly above it. Safest, but can mean detours and climbing.")
+        .defaultValue(false)
+        .build());
+
+    private final Setting<Boolean> recheckPath = sgPathing.add(new BoolSetting.Builder()
+        .name("recheck-path")
+        .description("Keep checking the path ahead against the blocks that load in, and search again as soon as something is in the way.")
+        .defaultValue(true)
+        .build());
+
+    private final Setting<Double> forestSpeed = sgPathing.add(new DoubleSetting.Builder()
+        .name("forest-speed")
+        .description("Fastest you fly, in blocks per tick, towards a forest whose chunks aren't loaded yet, so there is time to see the trees and react. 0 = no limit.")
+        .defaultValue(0.6)
+        .range(0, 5)
+        .sliderRange(0, 2)
+        .build());
+
     public enum MoveMode {
         Guide("Path finder only"),
         Fly("Fly (creative / Eloadra)");
@@ -181,6 +261,11 @@ public class NetherPath extends Module {
         .build());
 
     private static final double MIN_ACCURACY = 0.8;
+    private static final int VALIDATE_INTERVAL = 5;
+    private static final int VALIDATE_COOLDOWN = 20;
+    private static final double VALIDATE_RANGE = 90;
+    private static final double VALIDATE_MARGIN = 0.2;
+    private static final double FOREST_LOOKAHEAD = 48;
     private static final double WAYPOINT_REACHED = 4;
     private static final double WAYPOINT_PASSED = 24;
     private static final double REPLAN_BEFORE_END = 40;
@@ -208,6 +293,12 @@ public class NetherPath extends Module {
     private Vec3d stuckCheckPos;
     private List<Vec3d> progressPath = List.of();
     private boolean pressing;
+    private List<Boolean> pathForest = List.of();
+    private Vec3d lastTickPos;
+    private double speed;
+    private int validateTicks;
+    private int validateCooldown;
+    private boolean pathInvalid;
     private NetherTerrain terrain;
 
     public NetherPath() {
@@ -229,6 +320,12 @@ public class NetherPath extends Module {
         stuckLevel = 0;
         stuckCheckPos = null;
         progressPath = List.of();
+        pathForest = List.of();
+        lastTickPos = null;
+        speed = 0;
+        validateTicks = 0;
+        validateCooldown = 0;
+        pathInvalid = false;
         generation.incrementAndGet();
     }
 
@@ -253,6 +350,9 @@ public class NetherPath extends Module {
         }
 
         Vec3d pos = mc.player.getEntityPos();
+        // How far the player really moved last tick, whoever moved them
+        speed = lastTickPos == null ? 0 : Math.min(pos.distanceTo(lastTickPos), 10);
+        lastTickPos = pos;
 
         double toTarget = pos.distanceTo(target());
         if (toTarget < goalRadius.get()) {
@@ -279,6 +379,10 @@ public class NetherPath extends Module {
         List<Vec3d> points = path;
 
         checkStuck(points, pos);
+        if (recheckPath.get() && moveMode.get() == MoveMode.Fly && !planning && ++validateTicks >= VALIDATE_INTERVAL) {
+            validateTicks = 0;
+            validateAhead(points);
+        }
 
         if (!planning && cooldown-- <= 0) {
             boolean movedAway = plannedFrom == null || plannedFrom.distanceTo(pos) >= replanDistance.get();
@@ -347,6 +451,67 @@ public class NetherPath extends Module {
             || !mc.world.getBlockState(mc.player.getBlockPos().down(2)).getCollisionShape(mc.world, mc.player.getBlockPos().down(2)).isEmpty();
         mc.options.jumpKey.setPressed(diff.y > 1.5 || (nearGround && diff.y > -6));
         mc.options.sneakKey.setPressed(diff.y < -1.5 && !nearGround);
+
+        // Towards a forest that isn't loaded yet: slow down so its trees can show up and be avoided in time
+        if (forestSpeed.get() > 0 && speed > forestSpeed.get() && forestAhead(points)) {
+            mc.options.forwardKey.setPressed(false);
+            mc.options.backKey.setPressed(false);
+            mc.options.leftKey.setPressed(false);
+            mc.options.rightKey.setPressed(false);
+        }
+    }
+
+    /** Whether the path leads into a forest whose chunks aren't loaded yet within the next stretch. */
+    private boolean forestAhead(List<Vec3d> points) {
+        List<Boolean> forest = pathForest;
+        if (forest.size() != points.size()) return false;
+
+        double travelled = 0;
+        Vec3d previous = mc.player.getEntityPos();
+        for (int i = progress; i < points.size() && travelled < FOREST_LOOKAHEAD; i++) {
+            Vec3d wp = points.get(i);
+            travelled += previous.distanceTo(wp);
+            previous = wp;
+            if (forest.get(i) && mc.world.getChunkManager().getWorldChunk((int) Math.floor(wp.x) >> 4, (int) Math.floor(wp.z) >> 4) == null) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The path was planned from a prediction wherever chunks weren't loaded, and trees, builds and lava only show up once they are.
+     * Sweeps the player's hitbox along the next part of the path through the real blocks and searches again if something is in the way.
+     */
+    private void validateAhead(List<Vec3d> points) {
+        if (validateCooldown > 0) {
+            validateCooldown--;
+            return;
+        }
+        if (points.isEmpty() || progress >= points.size()) return;
+
+        Vec3d from = mc.player.getBoundingBox().getCenter();
+        double travelled = 0;
+        for (int i = progress; i < points.size() && travelled < VALIDATE_RANGE; i++) {
+            Vec3d to = points.get(i);
+            if (sweepBlocked(from, to)) {
+                validateCooldown = VALIDATE_COOLDOWN;
+                // The new plan has to replace this one even if it isn't closer to the target, otherwise the same blocked way is kept
+                pathInvalid = true;
+                cooldown = 0;
+                plannedFrom = null;
+                return;
+            }
+
+            travelled += from.distanceTo(to);
+            from = to;
+        }
+    }
+
+    /** Whether the player's hitbox, centered at {@code from}, hits something on the straight way to {@code to}. */
+    private boolean sweepBlocked(Vec3d from, Vec3d to) {
+        Box box = mc.player.getBoundingBox();
+        Vec3d move = to.subtract(from);
+        Box start = Box.of(from, box.getLengthX(), box.getLengthY(), box.getLengthZ()).expand(VALIDATE_MARGIN);
+        return Entity.adjustMovementForCollisions(mc.player, move, start, mc.world, List.of()).squaredDistanceTo(move) > 0.0025;
     }
 
     private void releaseKeys() {
@@ -428,6 +593,16 @@ public class NetherPath extends Module {
         }
     }
 
+    private Set<RegistryKey<Biome>> avoidedBiomes() {
+        Set<RegistryKey<Biome>> biomes = new HashSet<>();
+        if (avoidNetherWastes.get()) biomes.add(BiomeKeys.NETHER_WASTES);
+        if (avoidSoulSandValley.get()) biomes.add(BiomeKeys.SOUL_SAND_VALLEY);
+        if (avoidCrimsonForest.get()) biomes.add(BiomeKeys.CRIMSON_FOREST);
+        if (avoidWarpedForest.get()) biomes.add(BiomeKeys.WARPED_FOREST);
+        if (avoidBasaltDeltas.get()) biomes.add(BiomeKeys.BASALT_DELTAS);
+        return biomes;
+    }
+
     private void plan(Vec3d from) {
         plannedFrom = from;
         planning = true;
@@ -436,7 +611,8 @@ public class NetherPath extends Module {
         long worldSeed = seed.get();
         Vec3d goal = target();
         NetherPathfinder.Params params = new NetherPathfinder.Params(
-            margin.get().floatValue() + 0.1f * stuckLevel, clearance.get(), nodeLimit.get(), weight.get(), goalRadius.get(), useLoadedChunks.get(), predictionAccuracy < 0 || predictionAccuracy >= MIN_ACCURACY, List.copyOf(banned), groundClearance.get(), avoidUnloaded.get());
+            margin.get().floatValue() + 0.1f * stuckLevel, clearance.get(), nodeLimit.get(), weight.get(), goalRadius.get(), useLoadedChunks.get(), predictionAccuracy < 0 || predictionAccuracy >= MIN_ACCURACY, List.copyOf(banned), groundClearance.get(), avoidUnloaded.get(),
+            avoidedBiomes(), avoidBiomeCost.get(), treeCost.get(), learnTreeDensity.get(), forestLane.get());
 
         executor.execute(() -> {
             try {
@@ -464,7 +640,11 @@ public class NetherPath extends Module {
         List<Vec3d> fresh = result.path();
         boolean oldAhead = !old.isEmpty() && progress + 1 < old.size();
 
-        if (!fresh.isEmpty() && !old.isEmpty() && !pathReached && !result.reached()) {
+        // The old path runs into real blocks, so "keep it unless the new one is closer" doesn't apply
+        boolean replaceInvalid = pathInvalid;
+        pathInvalid = false;
+
+        if (!replaceInvalid && !fresh.isEmpty() && !old.isEmpty() && !pathReached && !result.reached()) {
             double oldDist = old.getLast().distanceTo(goal), newDist = fresh.getLast().distanceTo(goal);
             if (newDist > oldDist - 4) {
                 // Not any closer to the target: keep the current plan instead of swinging around, unless it's used up
@@ -479,6 +659,7 @@ public class NetherPath extends Module {
 
         boolean quiet = !old.isEmpty() && !fresh.isEmpty() && result.reached() == pathReached
             && old.getLast().distanceTo(fresh.getLast()) < 16;
+        pathForest = result.inForest();
         path = fresh;
         pathReached = result.reached();
 
