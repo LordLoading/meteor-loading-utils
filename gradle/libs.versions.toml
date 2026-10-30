@@ -1,5 +1,5 @@
 [versions]
-mod-version = "0.6.0"
+mod-version = "0.7.0"
 
 # Fabric (https://fabricmc.net/develop)
 minecraft = "1.21.4"
@@ -16,6 +16,7 @@ meteor = "1.21.4-SNAPSHOT"
 # Mods
 litematica = "0.21.7"
 malilib = "0.23.5"
+baritone = "1.21.4-SNAPSHOT"
 
 [libraries]
 # Fabric base
@@ -30,6 +31,7 @@ meteor-client = { module = "meteordevelopment:meteor-client", version.ref = "met
 # Mods
 litematica = { module = "maven.modrinth:litematica", version.ref = "litematica" }
 malilib = { module = "maven.modrinth:malilib", version.ref = "malilib" }
+baritone = { module = "meteordevelopment:baritone", version.ref = "baritone" }
 
 # Mods
 

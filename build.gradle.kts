@@ -30,6 +30,10 @@ repositories {
     }
 }
 
+val baritoneNested = configurations.create("baritoneNested") {
+    isTransitive = false
+}
+
 dependencies {
     // Fabric
     minecraft(libs.minecraft)
@@ -43,6 +47,30 @@ dependencies {
     // Mods
     modImplementation(libs.litematica)
     modImplementation(libs.malilib)
+    modCompileOnly(libs.baritone)
+    modRuntimeOnly(libs.baritone)
+    baritoneNested(libs.baritone)
+}
+
+val extractNetherPathfinder = tasks.register<Copy>("extractNetherPathfinder") {
+    from(providers.provider { zipTree(baritoneNested.singleFile) }) {
+        include("META-INF/jars/nether-pathfinder-*.jar")
+        eachFile { path = "nether-pathfinder.jar" }
+        includeEmptyDirs = false
+    }
+    into(layout.buildDirectory.dir("baritone"))
+}
+
+tasks.named("classes") {
+    dependsOn(extractNetherPathfinder)
+}
+
+loom {
+    runs {
+        named("client") {
+            systemProperties.put("fabric.addMods", layout.buildDirectory.file("baritone/nether-pathfinder.jar").get().asFile.absolutePath)
+        }
+    }
 }
 
 tasks {

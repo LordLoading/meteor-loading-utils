@@ -2,6 +2,7 @@ package com.lutils.modules;
 
 import com.lutils.LUtils;
 import com.lutils.settings.LongSetting;
+import com.lutils.utils.BaritoneHook;
 import com.lutils.utils.pathfinding.NetherPathfinder;
 import com.lutils.utils.pathfinding.NetherTerrain;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
@@ -242,6 +243,13 @@ public class NetherPath extends Module {
         .name("move-mode")
         .description("Path finder only: just shows the path, you fly yourself. Fly: also steers you along it, for creative flight and Eloadra.")
         .defaultValue(MoveMode.Fly)
+        .build());
+
+    private final Setting<Boolean> baritonePathfinding = sgPathing.add(new BoolSetting.Builder()
+        .name("baritone-pathfinding")
+        .description("Use Baritone's native nether pathfinder to calculate the route instead of this module's search. The module still flies the path. Clearance, wall margin, node limit, greediness, and biome avoidance do not apply.")
+        .defaultValue(true)
+        .visible(BaritoneHook::isAvailable)
         .build());
 
     private final Setting<Boolean> rotate = sgPathing.add(new BoolSetting.Builder()
@@ -676,6 +684,7 @@ public class NetherPath extends Module {
         }
         int splice = spliceIndex;
         Vec3d searchStart = chosenStart;
+        boolean useBaritone = baritonePathfinding.get() && BaritoneHook.isAvailable();
 
         NetherPathfinder.Params params = new NetherPathfinder.Params(
             margin.get().floatValue() + 0.1f * stuckLevel, clearance.get(), nodeLimit.get(), weight.get(), goalRadius.get(), useLoadedChunks.get(), predictionAccuracy < 0 || predictionAccuracy >= MIN_ACCURACY, List.copyOf(banned), groundClearance.get(), avoidUnloaded.get(),
@@ -688,7 +697,10 @@ public class NetherPath extends Module {
                 checkPrediction(from, worldSeed);
 
                 long start = System.currentTimeMillis();
-                NetherPathfinder.Result result = new NetherPathfinder(terrain).find(searchStart, goal, params, () -> gen != generation.get());
+                NetherPathfinder.Result nativeResult = useBaritone ? baritonePath(searchStart, goal, worldSeed) : null;
+                NetherPathfinder.Result result = nativeResult != null
+                    ? nativeResult
+                    : new NetherPathfinder(terrain).find(searchStart, goal, params, () -> gen != generation.get());
                 if (gen != generation.get()) return;
 
                 long ms = System.currentTimeMillis() - start;
@@ -700,6 +712,48 @@ public class NetherPath extends Module {
                 planning = false;
             }
         });
+    }
+
+    private NetherPathfinder.Result baritonePath(Vec3d from, Vec3d goal, long worldSeed) {
+        BaritoneHook.PathResult found = BaritoneHook.findPath(
+            BlockPos.ofFloored(from.x, from.y, from.z),
+            BlockPos.ofFloored(goal.x, goal.y, goal.z),
+            worldSeed);
+        if (found == null || found.points().isEmpty()) return null;
+
+        List<Vec3d> points = new ArrayList<>(found.points());
+        points.addFirst(from);
+        if (found.finished()) points.add(goal);
+
+        return new NetherPathfinder.Result(points, found.finished(), -1, forestFlags(points));
+    }
+
+    private List<Boolean> forestFlags(List<Vec3d> points) {
+        List<Boolean> flags = new ArrayList<>(points.size());
+        boolean usePrediction = useLoadedChunks.get() && (predictionAccuracy < 0 || predictionAccuracy >= MIN_ACCURACY);
+        long lastCell = Long.MIN_VALUE;
+        boolean forest = false;
+
+        for (Vec3d point : points) {
+            int cx = Math.floorDiv((int) Math.floor(point.x), NetherTerrain.CELL_XZ);
+            int cz = Math.floorDiv((int) Math.floor(point.z), NetherTerrain.CELL_XZ);
+            long cell = ((long) cx << 32) ^ (cz & 0xFFFFFFFFL);
+            if (cell != lastCell) {
+                lastCell = cell;
+                forest = isForest(cx, cz, usePrediction);
+            }
+            flags.add(forest);
+        }
+        return flags;
+    }
+
+    private boolean isForest(int cx, int cz, boolean usePrediction) {
+        if (mc.world == null || terrain == null) return false;
+
+        BlockPos pos = new BlockPos(cx * NetherTerrain.CELL_XZ + 2, 64, cz * NetherTerrain.CELL_XZ + 2);
+        WorldChunk chunk = mc.world.getChunkManager().getWorldChunk(pos.getX() >> 4, pos.getZ() >> 4);
+        RegistryKey<Biome> biome = chunk != null ? mc.world.getBiome(pos).getKey().orElse(null) : (usePrediction ? terrain.biomeAt(cx, cz) : null);
+        return biome == BiomeKeys.CRIMSON_FOREST || biome == BiomeKeys.WARPED_FOREST;
     }
 
     private void applyResult(NetherPathfinder.Result result, Vec3d goal, long ms, int spliceIndex) {
@@ -748,9 +802,10 @@ public class NetherPath extends Module {
         pathReached = result.reached();
 
         if (!chatFeedback.get() || quiet) return;
+        String cells = result.expanded() < 0 ? "" : String.format(", %d cells", result.expanded());
         if (fresh.isEmpty()) warning("No free space found around you.");
-        else if (result.reached()) info("Path found: %d waypoints, %d cells, %d ms.", fresh.size(), result.expanded(), ms);
-        else info("Target not reached, heading towards it: %d waypoints, %d cells, %d ms.", fresh.size(), result.expanded(), ms);
+        else if (result.reached()) info("Path found: %d waypoints%s, %d ms.", fresh.size(), cells, ms);
+        else info("Target not reached, heading towards it: %d waypoints%s, %d ms.", fresh.size(), cells, ms);
     }
 
     @EventHandler
