@@ -381,7 +381,7 @@ public class NetherPath extends Module {
                 return;
         }
 
-        Vec3d pos = mc.player.getPos();
+        Vec3d pos = mc.player.getEntityPos();
         // How far the player really moved last tick, whoever moved them
         speed = lastTickPos == null ? 0 : Math.min(pos.distanceTo(lastTickPos), 10);
         lastTickPos = pos;
