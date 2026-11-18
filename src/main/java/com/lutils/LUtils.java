@@ -43,6 +43,7 @@ public class LUtils extends MeteorAddon {
         Modules.get().add(new NamedItemHighlight());
         Modules.get().add(new SlimeChunkHighlight());
         Modules.get().add(new NetherPath());
+        Modules.get().add(new SignNotify());
         if (OtherModsUtils.litematicaLoaded() && OtherModsUtils.malilibLoaded()) {
             Modules.get().add(new AutoMapAlign());
         };
