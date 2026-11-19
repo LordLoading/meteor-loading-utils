@@ -122,7 +122,7 @@ public class SignEsp extends Module {
                 textRenderer.render(lines[i], pos.x, pos.y + i * lineHeight, textColor, true);
             }
         }
-        Renderer2D.COLOR.render();
+        Renderer2D.COLOR.render(null);
         textRenderer.end();
     }
 
